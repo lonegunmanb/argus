@@ -8,14 +8,21 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class LiteralExprTest {
     @ParameterizedTest
-    @ValueSource(strings = {"1", "1.1", /*beyond Long.MAX_VALUE*/"19223372036854775807.1"})
+    @ValueSource(strings = {"1.1", /*beyond Long.MAX_VALUE*/"19223372036854775807.1"})
     void numericLiteralTest(String decimal) {
         testLiteral(decimal, new BigDecimal(decimal));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"1", "-1", /*beyond Long.MAX_VALUE*/"19223372036854775807"})
+    void integerLiteralTest(String integer) {
+        testLiteral(integer, new BigInteger(integer));
     }
 
     @Test
@@ -27,6 +34,12 @@ class LiteralExprTest {
     @CsvSource({"TRUE, true", "FALSE, false", "true, true", "false, false"})
     void booleanLiteralTest(String sql, boolean expected) {
         testLiteral(sql, expected);
+    }
+
+    @Test
+    void nullLiteralTest() {
+        testLiteral("NULL", EvaluatorVisitor.Nil.INSTANCE);
+        testLiteral("null", EvaluatorVisitor.Nil.INSTANCE);
     }
 
     private void testLiteral(String sql, Object expected) {
