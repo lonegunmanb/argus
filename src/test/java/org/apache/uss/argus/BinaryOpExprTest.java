@@ -162,8 +162,20 @@ class BinaryOpExprTest {
             "1+2*3, 7",
             "(1+2*3)/2+1, 4.5"
     })
-    void compositNumericTest(String sql, String expected) {
+    void compositeNumericTest(String sql, String expected) {
         testBinaryOp(sql, new BigDecimal(expected));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "TRUE AND (1+1=2), true",
+            "False Or (1<2 Or 1>0), true",
+            "!(1<2 OR 3>4), false",
+            "(TRUE XOR FALSE) AND (TRUE AND TRUE),  true",
+            "(((((TRUE AND TRUE) OR FALSE) AND TRUE) OR FALSE) AND TRUE), true"
+    })
+    void compositeBooleanTest(String sql, boolean expected) {
+        testBinaryOp(sql, expected);
     }
 
     private void testBinaryOp(String sql, Object expected) {
