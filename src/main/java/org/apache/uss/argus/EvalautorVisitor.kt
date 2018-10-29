@@ -20,7 +20,7 @@ class EvaluatorVisitor : SQLASTVisitorAdapter() {
     private val stack: Stack<Any> = Stack()
 
     override fun visit(expr: SQLIntegerExpr?): Boolean {
-        stack.push(OperandExpr(expr!!, NumberUtils.convertNumberToTargetClass(expr.number, BigInteger::class.java)))
+        stack.push(OperandExpr(expr!!, NumberUtils.convertNumberToTargetClass(expr.number, BigDecimal::class.java)))
         return true
     }
 
@@ -39,14 +39,76 @@ class EvaluatorVisitor : SQLASTVisitorAdapter() {
         return true
     }
 
-    override fun visit(x: SQLBinaryOpExpr?): Boolean {
-        val op = x!!.operator
-        stack.push(op)
+    override fun visit(x: SQLNotExpr?): Boolean {
+        stack.push(SQLUnaryOperator.NOT)
         return true
+    }
+
+    override fun endVisit(x: SQLNotExpr?) {
+        val operandExpr = stack.pop() as OperandExpr
+        if (operandExpr.operand !is Boolean) {
+            throw TypeMismatchException("Require Boolean, got :" + operandExpr.toString())
+        }
+        stack.push(OperandExpr(x!!, !operandExpr.operand))
     }
 
     override fun visit(x: SQLNullExpr?): Boolean {
         stack.push(OperandExpr(x!!, Nil))
+        return true
+    }
+
+
+    override fun visit(x: SQLUnaryExpr?): Boolean {
+        stack.push(x!!.operator)
+        return true
+    }
+
+    override fun endVisit(x: SQLUnaryExpr?) {
+        val operandExpr = stack.pop() as OperandExpr
+        val func: ((OperandExpr) -> Any) = when (x!!.operator) {
+            SQLUnaryOperator.Not -> this::flipBoolean
+            SQLUnaryOperator.NOT -> this::flipBoolean
+            SQLUnaryOperator.Negative -> this::negative
+            SQLUnaryOperator.Plus -> this::numberItSelf
+            else -> throw UnsupportedFeatureException(x.toString())
+        }
+        stack.push(OperandExpr(x, func(operandExpr)))
+    }
+
+    private fun numberItSelf(operandExpr: OperandExpr): Number {
+        return when (operandExpr.operand) {
+            is BigDecimal -> {
+                operandExpr.operand
+            }
+            else -> {
+                throw TypeMismatchException("Require Number, got: " + operandExpr.toString())
+            }
+        }
+    }
+
+    private fun negative(operandExpr: OperandExpr): Number {
+        return when (operandExpr.operand) {
+            is BigDecimal -> {
+                -operandExpr.operand
+            }
+            is BigInteger -> {
+                -operandExpr.operand
+            }
+            else -> {
+                throw TypeMismatchException("Require Number, got: " + operandExpr.toString())
+            }
+        }
+    }
+
+    private fun flipBoolean(operandExpr: OperandExpr): Boolean {
+        if (operandExpr.operand !is Boolean) {
+            throw TypeMismatchException("Require Boolean, got: " + operandExpr.toString())
+        }
+        return !operandExpr.operand
+    }
+
+    override fun visit(x: SQLBinaryOpExpr?): Boolean {
+        stack.push(x!!.operator)
         return true
     }
 
@@ -149,38 +211,18 @@ class EvaluatorVisitor : SQLASTVisitorAdapter() {
     }
 
     private fun processNumericOperation(expr: SQLBinaryOpExpr, left: OperandExpr, right: OperandExpr): Boolean {
-        var action: ((SQLExpr, BigDecimal, BigDecimal) -> Unit)? = null
-
+        val action: ((SQLExpr, BigDecimal, BigDecimal) -> Unit)? =
         when (expr.operator) {
-            SQLBinaryOperator.Add -> {
-                action = this::add
-            }
-            SQLBinaryOperator.Subtract -> {
-                action = this::subtract
-            }
-            SQLBinaryOperator.Multiply -> {
-                action = this::multiply
-            }
-            SQLBinaryOperator.Modulus -> {
-                action = this::mod
-            }
-            SQLBinaryOperator.GreaterThan -> {
-                action = this::greaterThan
-            }
-            SQLBinaryOperator.GreaterThanOrEqual -> {
-                action = this::greaterThanOrEqual
-            }
-            SQLBinaryOperator.LessThan -> {
-                action = this::lessThan
-            }
-            SQLBinaryOperator.LessThanOrEqual -> {
-                action = this::lessThanOrEqual
-            }
-            SQLBinaryOperator.Divide -> {
-                action = this::divide
-            }
-            else -> {
-            }
+            SQLBinaryOperator.Add -> this::add
+            SQLBinaryOperator.Subtract -> this::subtract
+            SQLBinaryOperator.Multiply -> this::multiply
+            SQLBinaryOperator.Modulus -> this::mod
+            SQLBinaryOperator.GreaterThan -> this::greaterThan
+            SQLBinaryOperator.GreaterThanOrEqual -> this::greaterThanOrEqual
+            SQLBinaryOperator.LessThan -> this::lessThan
+            SQLBinaryOperator.LessThanOrEqual -> this::lessThanOrEqual
+            SQLBinaryOperator.Divide -> this::divide
+            else -> null
         }
         if (action != null) {
             action(expr, toNumber(left), toNumber(right))
@@ -234,14 +276,6 @@ class EvaluatorVisitor : SQLASTVisitorAdapter() {
     private fun divide(expr: SQLExpr, left: BigDecimal, right: BigDecimal) {
         try {
             stack.push(OperandExpr(expr, left.divide(right)))
-        } catch (e: ArithmeticException) {
-            throw ArithmeticException(expr.toString())
-        }
-    }
-
-    private fun dbDiv(expr: SQLExpr, left: BigDecimal, right: BigDecimal) {
-        try {
-            stack.push(OperandExpr(expr, left.toBigInteger().div(right.toBigInteger()).toBigDecimal()))
         } catch (e: ArithmeticException) {
             throw ArithmeticException(expr.toString())
         }

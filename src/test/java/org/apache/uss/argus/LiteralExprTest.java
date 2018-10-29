@@ -22,7 +22,7 @@ class LiteralExprTest {
     @ParameterizedTest
     @ValueSource(strings = {"1", "-1", /*beyond Long.MAX_VALUE*/"19223372036854775807"})
     void integerLiteralTest(String integer) {
-        testLiteral(integer, new BigInteger(integer));
+        testLiteral(integer, new BigDecimal(integer));
     }
 
     @Test
