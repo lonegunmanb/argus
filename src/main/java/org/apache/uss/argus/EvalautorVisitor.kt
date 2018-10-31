@@ -10,8 +10,6 @@ import java.math.BigDecimal
 import java.math.BigInteger
 import java.util.*
 
-data class OperandExpr(val expr: SQLExpr, val operand: Any)
-
 class EvaluatorVisitor : SQLASTVisitorAdapter() {
     object Nil
 
@@ -47,11 +45,10 @@ class EvaluatorVisitor : SQLASTVisitorAdapter() {
 
     override fun endVisit(x: SQLNotExpr) {
         val operandExpr = stack.pop() as OperandExpr
-        if (operandExpr.operand !is Boolean) {
-            throw TypeMismatchException("Require Boolean, got :" + operandExpr.toString())
-        }
+        val operand = operandExpr.getOperand<Boolean>()
+                ?: throw TypeMismatchException("Require Boolean, got :" + operandExpr.toString())
         stack.pop()
-        stack.push(OperandExpr(x, !operandExpr.operand))
+        stack.push(OperandExpr(x, !operand))
     }
 
     override fun visit(x: SQLNullExpr): Boolean {
@@ -122,16 +119,16 @@ class EvaluatorVisitor : SQLASTVisitorAdapter() {
     }
 
     private fun processIsAndIsNot(left: OperandExpr, right: OperandExpr, x: SQLBinaryOpExpr): Boolean {
-        if ((x.operator == SQLBinaryOperator.Is || x.operator == SQLBinaryOperator.IsNot) && right.operand != Nil) {
+        if ((x.operator == SQLBinaryOperator.Is || x.operator == SQLBinaryOperator.IsNot) && !right.isNil()) {
             throw TypeMismatchException("Required NULL, got:" + right.expr.toString())
         }
         when {
             x.operator == SQLBinaryOperator.Is -> {
-                stack.push(OperandExpr(x, left.operand == Nil))
+                stack.push(OperandExpr(x, left.isNil()))
                 return true
             }
             x.operator == SQLBinaryOperator.IsNot -> {
-                stack.push(OperandExpr(x, left.operand != Nil))
+                stack.push(OperandExpr(x, !left.isNil()))
                 return true
             }
         }
@@ -140,8 +137,8 @@ class EvaluatorVisitor : SQLASTVisitorAdapter() {
 
     private fun processEqualOperation(expr: SQLBinaryOpExpr, left: OperandExpr, right: OperandExpr): Boolean {
         if (expr.operator == SQLBinaryOperator.Equality) {
-            val leftOperand = left.operand
-            val rightOperand = right.operand
+            val leftOperand = left.getOperand<Any>()
+            val rightOperand = right.getOperand<Any>()
             when {
                 leftOperand is Number && rightOperand is Number -> {
                 }
@@ -149,10 +146,10 @@ class EvaluatorVisitor : SQLASTVisitorAdapter() {
                 }
                 leftOperand is Boolean && rightOperand is Boolean -> {
                 }
-                leftOperand == Nil && rightOperand == Nil -> {
+                left.isNil() && right.isNil() -> {
                     stack.push(OperandExpr(expr, true))
                 }
-                leftOperand == Nil || rightOperand == Nil -> {
+                left.isNil() || right.isNil() -> {
                     stack.push(OperandExpr(expr, false))
                 }
                 else -> {
@@ -168,32 +165,30 @@ class EvaluatorVisitor : SQLASTVisitorAdapter() {
 
 
     private fun processBooleanOperation(expr: SQLBinaryOpExpr, left: OperandExpr, right: OperandExpr): Boolean {
-        var action: ((SQLExpr, Boolean, Boolean) -> Unit)? = null
-        when (expr.operator) {
-            SQLBinaryOperator.BooleanAnd -> {
-                action = this::booleanAnd
-            }
-            SQLBinaryOperator.BooleanOr -> {
-                action = this::booleanOr
-            }
-            SQLBinaryOperator.BooleanXor -> {
-                action = this::booleanXor
-            }
-            else -> {
-            }
-        }
-        if (action != null) {
+        val action: ((SQLExpr, Boolean, Boolean) -> Unit) =
+                when (expr.operator) {
+                    SQLBinaryOperator.BooleanAnd -> {
+                        this::booleanAnd
+                    }
+                    SQLBinaryOperator.BooleanOr -> {
+                        this::booleanOr
+                    }
+                    SQLBinaryOperator.BooleanXor -> {
+                        this::booleanXor
+                    }
+                    else -> {
+                        return false
+                    }
+                }
 
-            if (left.operand !is Boolean) {
-                throw TypeMismatchException("Required Boolean, got " + left.expr.toString())
-            }
-            if (right.operand !is Boolean) {
-                throw TypeMismatchException("Required Boolean, got " + right.expr.toString())
-            }
-            action(expr, left.operand, right.operand)
-            return true
-        }
-        return false
+        val leftOperand = left.getOperand<Boolean>()
+                ?: throw TypeMismatchException("Required Boolean, got " + left.expr.toString())
+
+        val rightOperand = right.getOperand<Boolean>()
+                ?: throw TypeMismatchException("Required Boolean, got " + right.expr.toString())
+
+        action(expr, leftOperand, rightOperand)
+        return true
     }
 
     private fun processNumericOperation(expr: SQLBinaryOpExpr, left: OperandExpr, right: OperandExpr): Boolean {
@@ -218,9 +213,7 @@ class EvaluatorVisitor : SQLASTVisitorAdapter() {
     }
 
     private fun nullInBinaryOp(left: OperandExpr, right: OperandExpr, expr: SQLBinaryOpExpr): Boolean {
-        val leftOperand = left.operand
-        val rightOperand = right.operand
-        if (leftOperand == Nil || rightOperand == Nil) {
+        if (left.isNil() || right.isNil()) {
             stack.push(OperandExpr(expr, Nil))
             return true
         }
@@ -228,23 +221,18 @@ class EvaluatorVisitor : SQLASTVisitorAdapter() {
     }
 
     private fun numberItSelf(operandExpr: OperandExpr): Number {
-        return when (operandExpr.operand) {
-            is BigDecimal -> {
-                operandExpr.operand
-            }
-            else -> {
-                throw TypeMismatchException("Require Number, got: " + operandExpr.toString())
-            }
-        }
+        return operandExpr.getOperand<BigDecimal>()
+                ?: throw TypeMismatchException("Require Number, got: " + operandExpr.toString())
     }
 
     private fun negative(operandExpr: OperandExpr): Number {
-        return when (operandExpr.operand) {
+        val operand = operandExpr.getOperand<Number>()
+        return when (operand) {
             is BigDecimal -> {
-                -operandExpr.operand
+                -operand
             }
             is BigInteger -> {
-                -operandExpr.operand
+                -operand
             }
             else -> {
                 throw TypeMismatchException("Require Number, got: " + operandExpr.toString())
@@ -253,10 +241,9 @@ class EvaluatorVisitor : SQLASTVisitorAdapter() {
     }
 
     private fun flipBoolean(operandExpr: OperandExpr): Boolean {
-        if (operandExpr.operand !is Boolean) {
-            throw TypeMismatchException("Require Boolean, got: " + operandExpr.toString())
-        }
-        return !operandExpr.operand
+        val operand = operandExpr.getOperand<Boolean>()
+                ?: throw TypeMismatchException("Require Boolean, got: " + operandExpr.toString())
+        return !operand
     }
 
     private fun booleanXor(expr: SQLExpr, left: Boolean, right: Boolean) {
@@ -312,7 +299,7 @@ class EvaluatorVisitor : SQLASTVisitorAdapter() {
     }
 
     private fun toNumber(operandExpr: OperandExpr): BigDecimal {
-        val operand = operandExpr.operand
+        val operand = operandExpr.getOperand<Any>()
         return when (operand) {
             is BigDecimal -> operand
             is Number -> NumberUtils.convertNumberToTargetClass(operand, BigDecimal::class.java) as BigDecimal
