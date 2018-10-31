@@ -137,14 +137,15 @@ class EvaluatorVisitor : SQLASTVisitorAdapter() {
 
     private fun processEqualOperation(expr: SQLBinaryOpExpr, left: OperandExpr, right: OperandExpr): Boolean {
         if (expr.operator == SQLBinaryOperator.Equality) {
-            val leftOperand = left.getOperand<Any>()
-            val rightOperand = right.getOperand<Any>()
             when {
-                leftOperand is Number && rightOperand is Number -> {
+                left.isType<Number>() && right.isType<Number>() -> {
+                    stack.push(OperandExpr(expr, left.getOperand<Number>() == right.getOperand<Number>()))
                 }
-                leftOperand is String && rightOperand is String -> {
+                left.isType<Boolean>() && right.isType<Boolean>() -> {
+                    stack.push(OperandExpr(expr, left.getOperand<Boolean>() == right.getOperand<Boolean>()))
                 }
-                leftOperand is Boolean && rightOperand is Boolean -> {
+                left.isType<String>() && right.isType<String>() -> {
+                    stack.push(OperandExpr(expr, left.getOperand<String>() == right.getOperand<String>()))
                 }
                 left.isNil() && right.isNil() -> {
                     stack.push(OperandExpr(expr, true))
@@ -157,7 +158,6 @@ class EvaluatorVisitor : SQLASTVisitorAdapter() {
                             + " right:" + right.expr.toString())
                 }
             }
-            stack.push(OperandExpr(expr, leftOperand == rightOperand))
             return true
         }
         return false
@@ -299,13 +299,12 @@ class EvaluatorVisitor : SQLASTVisitorAdapter() {
     }
 
     private fun toNumber(operandExpr: OperandExpr): BigDecimal {
-        val operand = operandExpr.getOperand<Any>()
-        return when (operand) {
-            is BigDecimal -> operand
-            is Number -> NumberUtils.convertNumberToTargetClass(operand, BigDecimal::class.java) as BigDecimal
+        return when {
+            operandExpr.isType<BigDecimal>() -> operandExpr.getOperand<BigDecimal>()!!
+            operandExpr.isType<Number>() -> NumberUtils.convertNumberToTargetClass(operandExpr.getOperand<Number>(), BigDecimal::class.java) as BigDecimal
             else -> {
                 try {
-                    NumberUtils.parseNumber(operand.toString(), BigDecimal::class.java) as BigDecimal
+                    NumberUtils.parseNumber(operandExpr.getJavaOperand().toString(), BigDecimal::class.java) as BigDecimal
                 } catch (e: IllegalArgumentException) {
                     throw TypeMismatchException("Required Number, got " + operandExpr.expr.toString())
                 }

@@ -11,6 +11,7 @@ import java.math.BigDecimal;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+@SuppressWarnings("ConstantConditions")
 class BinaryOpExprTest {
     @ParameterizedTest
     @CsvSource({"2>1, true"
@@ -182,6 +183,6 @@ class BinaryOpExprTest {
         var expr = SQLUtils.toSQLExpr(sql, JdbcConstants.POSTGRESQL);
         var visitor = new EvaluatorVisitor();
         expr.accept(visitor);
-        assertEquals(expected, ((OperandExpr) visitor.getValue()).getOperand());
+        assertEquals(expected, ((OperandExpr) visitor.getValue()).getJavaOperand());
     }
 }

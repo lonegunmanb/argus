@@ -7,6 +7,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+@SuppressWarnings("ConstantConditions")
 class MethodCallExprTest {
 
     @ParameterizedTest
@@ -18,6 +19,6 @@ class MethodCallExprTest {
         var expr = SQLUtils.toSQLExpr(sql, JdbcConstants.POSTGRESQL);
         var visitor = new EvaluatorVisitor();
         expr.accept(visitor);
-        assertEquals(expected, ((OperandExpr) visitor.getValue()).getOperand());
+        assertEquals(expected, ((OperandExpr) visitor.getValue()).getJavaOperand());
     }
 }

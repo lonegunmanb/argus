@@ -11,6 +11,7 @@ import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+@SuppressWarnings("ConstantConditions")
 class LiteralExprTest {
     @ParameterizedTest
     @ValueSource(strings = {"1.1", /*beyond Long.MAX_VALUE*/"19223372036854775807.1"})
@@ -45,6 +46,6 @@ class LiteralExprTest {
         var expr = SQLUtils.toSQLExpr(sql, JdbcConstants.POSTGRESQL);
         var visitor = new EvaluatorVisitor();
         expr.accept(visitor);
-        assertEquals(expected, ((OperandExpr) visitor.getValue()).getOperand());
+        assertEquals(expected, ((OperandExpr) visitor.getValue()).getJavaOperand());
     }
 }

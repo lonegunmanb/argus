@@ -4,12 +4,15 @@ import com.alibaba.druid.sql.SQLUtils;
 import com.alibaba.druid.util.JdbcConstants;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 
+@SuppressWarnings("ConstantConditions")
 class UnaryOpExprTest {
 
     @ParameterizedTest
@@ -23,7 +26,7 @@ class UnaryOpExprTest {
         var expr = SQLUtils.toSQLExpr(sql, JdbcConstants.POSTGRESQL);
         var visitor = new EvaluatorVisitor();
         expr.accept(visitor);
-        assertEquals(expected, ((OperandExpr)visitor.getValue()).getOperand());
+        assertEquals(expected, ((OperandExpr) visitor.getValue()).getJavaOperand());
     }
 
     @ParameterizedTest
@@ -37,6 +40,19 @@ class UnaryOpExprTest {
         var expr = SQLUtils.toSQLExpr(sql, JdbcConstants.POSTGRESQL);
         var visitor = new EvaluatorVisitor();
         expr.accept(visitor);
-        assertEquals(new BigDecimal(expected), ((OperandExpr)visitor.getValue()).getOperand());
+        assertEquals(new BigDecimal(expected), ((OperandExpr) visitor.getValue()).getJavaOperand());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "-(1=1)",
+            "NOT(1+1)"
+    })
+    void invalid_negative_test(String sql) {
+        assertThrows(TypeMismatchException.class, () -> {
+            var expr = SQLUtils.toSQLExpr(sql, JdbcConstants.POSTGRESQL);
+            var visitor = new EvaluatorVisitor();
+            expr.accept(visitor);
+        });
     }
 }
