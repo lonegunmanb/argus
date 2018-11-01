@@ -61,6 +61,13 @@ internal class NativeObjectTest {
     }
 
     @Test
+    fun accessNilObjectPropertyShouldReturnNilObjectTest() {
+        val nullParameter = nativeObject(EvaluatorVisitor.Nil)
+        val property = nullParameter["test", DummyExpr()]
+        assertTrue(property.isNil())
+    }
+
+    @Test
     fun getPropertyFromObjectTest() {
         val expr = DummyExpr()
         val name = "Peter"

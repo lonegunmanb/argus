@@ -29,6 +29,9 @@ class NativeObject(private val `object`: Any, parameterName: String, expr: SQLEx
     }
 
     override fun get(index: String, expr: SQLExpr): EvalObject {
+        if (isNil()) {
+            return NativeObject(EvaluatorVisitor.Nil, index, expr)
+        }
         val getMethodName = "get${index.capitalize()}"
         val method: Method? = try {
             `object`.javaClass.getMethod(getMethodName)
