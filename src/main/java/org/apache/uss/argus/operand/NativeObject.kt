@@ -13,9 +13,13 @@ class NativeObject(private val `object`: Any, parameterName: String, expr: SQLEx
         }
     }
 
+    fun javaOperand(): Any? {
+        return operand(Any::class)
+    }
+
     override fun isType(clazz: KClass<*>): Boolean {
-        return when {
-            `object` == EvaluatorVisitor.Nil -> true
+        return when (`object`) {
+            EvaluatorVisitor.Nil -> true
             else -> clazz.java.isAssignableFrom(`object`.javaClass)
         }
     }

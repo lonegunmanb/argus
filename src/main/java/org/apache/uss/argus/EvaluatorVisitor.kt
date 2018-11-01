@@ -4,6 +4,7 @@ import com.alibaba.druid.sql.ast.SQLExpr
 import com.alibaba.druid.sql.ast.expr.*
 import com.alibaba.druid.sql.visitor.SQLASTVisitorAdapter
 import org.apache.uss.argus.function.FunctionCalls
+import org.apache.uss.argus.operand.EvalObject
 import org.apache.uss.argus.operand.EvaluatedOperand
 import org.apache.uss.argus.operand.Operand
 import org.springframework.util.NumberUtils
@@ -12,13 +13,18 @@ import java.math.BigDecimal
 import java.math.BigInteger
 import java.util.*
 
-class EvaluatorVisitor : SQLASTVisitorAdapter() {
+class EvaluatorVisitor() : SQLASTVisitorAdapter() {
     object Nil
 
     var value: Any? = null
         get() = stack.peek()
 
     private val stack: Stack<Any> = Stack()
+    private var source: EvalObject? = null
+
+    constructor(source: EvalObject) : this() {
+        this.source = source
+    }
 
     override fun visit(expr: SQLIntegerExpr): Boolean {
         stack.push(EvaluatedOperand(expr, NumberUtils.convertNumberToTargetClass(expr.number, BigDecimal::class.java)))
@@ -38,6 +44,22 @@ class EvaluatorVisitor : SQLASTVisitorAdapter() {
     override fun visit(expr: SQLBooleanExpr): Boolean {
         stack.push(EvaluatedOperand(expr, expr.value))
         return true
+    }
+
+    override fun visit(expr: SQLIdentifierExpr): Boolean {
+        stack.push(source!!)
+        stack.push(expr)
+        return true
+    }
+
+    override fun endVisit(expr: SQLIdentifierExpr) {
+        stack.pop()
+        val obj = stack.pop() as EvalObject
+        val operand = when (expr.name) {
+            obj.objectName -> obj
+            else -> obj[obj.objectName, expr]
+        }
+        stack.push(operand)
     }
 
     override fun visit(x: SQLNotExpr): Boolean {
@@ -138,33 +160,51 @@ class EvaluatorVisitor : SQLASTVisitorAdapter() {
     }
 
     private fun processEqualOperation(expr: SQLBinaryOpExpr, left: Operand, right: Operand): Boolean {
-        if (expr.operator == SQLBinaryOperator.Equality) {
-            when {
-                left.isType<Number>() && right.isType<Number>() -> {
-                    stack.push(EvaluatedOperand(expr, left.getOperand<Number>() == right.getOperand<Number>()))
-                }
-                left.isType<Boolean>() && right.isType<Boolean>() -> {
-                    stack.push(EvaluatedOperand(expr, left.getOperand<Boolean>() == right.getOperand<Boolean>()))
-                }
-                left.isType<String>() && right.isType<String>() -> {
-                    stack.push(EvaluatedOperand(expr, left.getOperand<String>() == right.getOperand<String>()))
-                }
-                left.isNil() && right.isNil() -> {
-                    stack.push(EvaluatedOperand(expr, true))
-                }
-                left.isNil() || right.isNil() -> {
-                    stack.push(EvaluatedOperand(expr, false))
-                }
-                else -> {
-                    throw TypeMismatchException("Incompatible type to compare, left:" + left.expr.toString()
-                            + " right:" + right.expr.toString())
-                }
-            }
-            return true
+        return when (expr.operator) {
+            SQLBinaryOperator.Equality -> equal(expr, left, right)
+            SQLBinaryOperator.NotEqual -> notEqual(expr, left, right)
+            SQLBinaryOperator.LessThanOrGreater -> notEqual(expr, left, right)
+            else -> false
         }
-        return false
     }
 
+    private fun equal(expr: SQLBinaryOpExpr, left: Operand, right: Operand): Boolean {
+        when {
+            left.isType<Number>() && right.isType<Number>() -> {
+                stack.push(EvaluatedOperand(expr, left.getOperand<Number>() == right.getOperand<Number>()))
+            }
+            left.isType<Boolean>() && right.isType<Boolean>() -> {
+                stack.push(EvaluatedOperand(expr, left.getOperand<Boolean>() == right.getOperand<Boolean>()))
+            }
+            left.isType<String>() && right.isType<String>() -> {
+                stack.push(EvaluatedOperand(expr, left.getOperand<String>() == right.getOperand<String>()))
+            }
+            else -> {
+                throw TypeMismatchException("Incompatible type to compare, left:" + left.expr.toString()
+                        + " right:" + right.expr.toString())
+            }
+        }
+        return true
+    }
+
+    private fun notEqual(expr: SQLBinaryOpExpr, left: Operand, right: Operand): Boolean {
+        when {
+            left.isType<Number>() && right.isType<Number>() -> {
+                stack.push(EvaluatedOperand(expr, left.getOperand<Number>() != right.getOperand<Number>()))
+            }
+            left.isType<Boolean>() && right.isType<Boolean>() -> {
+                stack.push(EvaluatedOperand(expr, left.getOperand<Boolean>() != right.getOperand<Boolean>()))
+            }
+            left.isType<String>() && right.isType<String>() -> {
+                stack.push(EvaluatedOperand(expr, left.getOperand<String>() != right.getOperand<String>()))
+            }
+            else -> {
+                throw TypeMismatchException("Incompatible type to compare, left:" + left.expr.toString()
+                        + " right:" + right.expr.toString())
+            }
+        }
+        return true
+    }
 
     private fun processBooleanOperation(expr: SQLBinaryOpExpr, left: Operand, right: Operand): Boolean {
         val action: ((SQLExpr, Boolean, Boolean) -> Unit) =
