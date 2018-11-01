@@ -1,7 +1,7 @@
 package org.apache.uss.argus.function
 
-object Functions {
-    private val functions: MutableMap<String, Function> = HashMap()
+object FunctionCalls {
+    private val functions: MutableMap<String, FunctionCall> = HashMap()
 
     init {
         functions["concat"] = Concat.instance
@@ -47,7 +47,7 @@ object Functions {
         //functions["ascii"] = Ascii.instance
     }
 
-    fun get(name: String): Function? {
+    fun get(name: String): FunctionCall? {
         return functions[name]
     }
 }

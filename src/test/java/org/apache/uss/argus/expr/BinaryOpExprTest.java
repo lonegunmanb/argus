@@ -1,7 +1,10 @@
-package org.apache.uss.argus;
+package org.apache.uss.argus.expr;
 
 import com.alibaba.druid.sql.SQLUtils;
 import com.alibaba.druid.util.JdbcConstants;
+import org.apache.uss.argus.EvaluatorVisitor;
+import org.apache.uss.argus.TypeMismatchException;
+import org.apache.uss.argus.operand.EvaluatedOperand;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -183,6 +186,6 @@ class BinaryOpExprTest {
         var expr = SQLUtils.toSQLExpr(sql, JdbcConstants.POSTGRESQL);
         var visitor = new EvaluatorVisitor();
         expr.accept(visitor);
-        assertEquals(expected, ((OperandExpr) visitor.getValue()).getJavaOperand());
+        assertEquals(expected, ((EvaluatedOperand) visitor.getValue()).getJavaOperand());
     }
 }
