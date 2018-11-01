@@ -5,7 +5,7 @@ import org.apache.uss.argus.EvaluatorVisitor
 import java.lang.reflect.Method
 import kotlin.reflect.KClass
 
-class NativeObject(private val `object`: Any, parameterName: String, expr: SQLExpr) : EvalObject(parameterName, expr) {
+class PojoObject(private val `object`: Any, parameterName: String, expr: SQLExpr) : EvalObject(parameterName, expr) {
     override fun operand(clazz: KClass<*>): Any? {
         return when {
             isType(clazz) -> `object`
@@ -30,13 +30,13 @@ class NativeObject(private val `object`: Any, parameterName: String, expr: SQLEx
 
     override fun get(index: String, expr: SQLExpr): EvalObject {
         if (isNil()) {
-            return NativeObject(EvaluatorVisitor.Nil, index, expr)
+            return PojoObject(EvaluatorVisitor.Nil, index, expr)
         }
         val getMethodName = "get${index.capitalize()}"
         val method: Method? = try {
             `object`.javaClass.getMethod(getMethodName)
         } catch (e: NoSuchMethodException) {
-            null
+            return PojoObject(EvaluatorVisitor.Nil, index, expr)
         }
         val value = when (method) {
             null -> EvaluatorVisitor.Nil
@@ -44,6 +44,6 @@ class NativeObject(private val `object`: Any, parameterName: String, expr: SQLEx
                 method.invoke(`object`)
             }
         }
-        return NativeObject(value, index, expr)
+        return PojoObject(value, index, expr)
     }
 }

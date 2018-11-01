@@ -9,14 +9,14 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-internal class NativeObjectTest {
+internal class PojoObjectTest {
     @Test
     fun objectIsTypeTest() {
-        val booleanParameter = nativeObject(true)
+        val booleanParameter = pojoObject(true)
         assertTrue(booleanParameter.isType<Boolean>())
         assertFalse(booleanParameter.isType<String>())
 
-        val decimalParameter = nativeObject(BigDecimal("123.456"))
+        val decimalParameter = pojoObject(BigDecimal("123.456"))
         assertTrue(decimalParameter.isType<BigDecimal>())
         assertTrue(decimalParameter.isType<Number>())
         assertTrue(decimalParameter.isType<Any>())
@@ -25,7 +25,7 @@ internal class NativeObjectTest {
 
     @Test
     fun nilShouldCompatibleWithAllTypesTest() {
-        val nullParameter = nativeObject(EvaluatorVisitor.Nil)
+        val nullParameter = pojoObject(EvaluatorVisitor.Nil)
         assertTrue(nullParameter.isType<Boolean>())
         assertTrue(nullParameter.isType<BigDecimal>())
         assertTrue(nullParameter.isType<String>())
@@ -35,18 +35,18 @@ internal class NativeObjectTest {
     @Test
     @ValueSource()
     fun objectIsNilTest() {
-        val p1 = nativeObject(1)
+        val p1 = pojoObject(1)
         assertFalse(p1.isNil())
-        val p2 = nativeObject(true)
+        val p2 = pojoObject(true)
         assertFalse(p2.isNil())
-        val p3 = nativeObject(EvaluatorVisitor.Nil)
+        val p3 = pojoObject(EvaluatorVisitor.Nil)
         assertTrue(p3.isNil())
     }
 
     @Test
     fun objectToOperandTest() {
         val decimal = BigDecimal("123.456")
-        val p1 = nativeObject(decimal)
+        val p1 = pojoObject(decimal)
         assertEquals(decimal, p1.operand(Number::class))
         assertEquals(decimal, p1.operand(BigDecimal::class))
         assertNull(p1.operand(Boolean::class))
@@ -54,7 +54,7 @@ internal class NativeObjectTest {
 
     @Test
     fun nullShouldReturnNilOperandTest() {
-        val nullParameter = nativeObject(EvaluatorVisitor.Nil)
+        val nullParameter = pojoObject(EvaluatorVisitor.Nil)
         assertEquals(EvaluatorVisitor.Nil, nullParameter.operand(Boolean::class))
         assertEquals(EvaluatorVisitor.Nil, nullParameter.operand(String::class))
         assertEquals(EvaluatorVisitor.Nil, nullParameter.operand(BigDecimal::class))
@@ -62,9 +62,16 @@ internal class NativeObjectTest {
 
     @Test
     fun accessNilObjectPropertyShouldReturnNilObjectTest() {
-        val nullParameter = nativeObject(EvaluatorVisitor.Nil)
+        val nullParameter = pojoObject(EvaluatorVisitor.Nil)
         val property = nullParameter["test", DummyExpr()]
         assertTrue(property.isNil())
+    }
+
+    @Test
+    fun accessNotExistedPropertyShouldReturnNilObjectTest() {
+        val person = Person("name", 10, null)
+        val parameter = pojoObject(person)
+        assertTrue(parameter["not existed", DummyExpr()].isNil())
     }
 
     @Test
@@ -73,7 +80,7 @@ internal class NativeObjectTest {
         val name = "Peter"
         val age = 20
         val person = Person(name, age, null)
-        val p = nativeObject(person)
+        val p = pojoObject(person)
         val nameProperty = p["name", expr]
         assertEquals(name, nameProperty.getOperand<String>())
         assertEquals(expr, nameProperty.expr)
@@ -95,7 +102,7 @@ internal class NativeObjectTest {
         val address = Address(exactlyAddress, city)
         val person = Person("Peter", 20, address)
 
-        val p = nativeObject(person)
+        val p = pojoObject(person)
         val addressNameProperty = p["address", expr]["address", nestedExpr]
         val cityProperty = p["address", expr]["city", nestedExpr]
         assertEquals(exactlyAddress, addressNameProperty.getOperand<String>())
@@ -107,5 +114,5 @@ internal class NativeObjectTest {
     private data class Person(val name: String, val age: Int, val address: Address?)
     private data class Address(val address: String, val city: String)
 
-    private fun nativeObject(i: Any) = NativeObject(i, "test", DummyExpr())
+    private fun pojoObject(i: Any) = PojoObject(i, "test", DummyExpr())
 }

@@ -9,7 +9,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import java.math.BigDecimal
 
-internal class NativeObjectBindingTest {
+internal class PojoObjectBindingTest {
 
     @ParameterizedTest
     @CsvSource("p+1=2, 1", "p>1, 2", "p*0=0, 10", "p=p, 1", "NOT(p<>p), 1", "NOT(p!=p), 1")
@@ -49,7 +49,7 @@ internal class NativeObjectBindingTest {
         }
     }
 
-    private fun parameter(parameter: Any): NativeObject {
-        return NativeObject(parameter, "p", DummyExpr())
+    private fun parameter(parameter: Any): PojoObject {
+        return PojoObject(parameter, "p", DummyExpr())
     }
 }
