@@ -13,10 +13,6 @@ class PojoObject(private val `object`: Any, parameterName: String, expr: SQLExpr
         }
     }
 
-    fun javaOperand(): Any? {
-        return operand(Any::class)
-    }
-
     override fun isType(clazz: KClass<*>): Boolean {
         return when (`object`) {
             EvaluatorVisitor.Nil -> true

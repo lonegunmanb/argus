@@ -49,7 +49,7 @@ internal class PojoObjectBindingTest {
             "p.notexisted.city, null")
     fun propertyGetTest(sql: String, expected: String) {
         val address = Address("address1", "city1")
-        val person = Person("name1", 10, address)
+        val person = Person("name1", 10, address, true)
         val expr = SQLUtils.toSQLExpr(sql, JdbcConstants.POSTGRESQL)
         val visitor = EvaluatorVisitor(parameter(person))
         expr.accept(visitor)
@@ -68,7 +68,7 @@ internal class PojoObjectBindingTest {
             "select * from person as p where p.notexist='notexist', null")
     fun pojoValidationTest(sql: String, expected: String) {
         val address = Address("address1", "city1")
-        val person = Person("name1", 10, address)
+        val person = Person("name1", 10, address, true)
         val statement = SQLUtils.parseStatements(sql, JdbcConstants.POSTGRESQL)[0]
         val expr = ((statement as SQLSelectStatement).select.query as SQLSelectQueryBlock).where!!
         val visitor = EvaluatorVisitor(parameter(person))

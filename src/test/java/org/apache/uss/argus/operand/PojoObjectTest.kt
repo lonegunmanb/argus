@@ -1,13 +1,10 @@
 package org.apache.uss.argus.operand
 
 import org.apache.uss.argus.EvaluatorVisitor
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.provider.ValueSource
 import java.math.BigDecimal
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 internal class PojoObjectTest {
     @Test
@@ -69,7 +66,7 @@ internal class PojoObjectTest {
 
     @Test
     fun accessNotExistedPropertyShouldReturnNilObjectTest() {
-        val person = Person("name", 10, null)
+        val person = Person("name", 10, null, true)
         val parameter = pojoObject(person)
         assertTrue(parameter["not existed", DummyExpr()].isNil())
     }
@@ -79,7 +76,7 @@ internal class PojoObjectTest {
         val expr = DummyExpr()
         val name = "Peter"
         val age = 20
-        val person = Person(name, age, null)
+        val person = Person(name, age, null, true)
         val p = pojoObject(person)
         val nameProperty = p["name", expr]
         assertEquals(name, nameProperty.getOperand<String>())
@@ -100,7 +97,7 @@ internal class PojoObjectTest {
         val exactlyAddress = "somewhere"
         val city = "over the rainbow"
         val address = Address(exactlyAddress, city)
-        val person = Person("Peter", 20, address)
+        val person = Person("Peter", 20, address, true)
 
         val p = pojoObject(person)
         val addressNameProperty = p["address", expr]["address", nestedExpr]
