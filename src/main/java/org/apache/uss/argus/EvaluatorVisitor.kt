@@ -62,6 +62,17 @@ class EvaluatorVisitor() : SQLASTVisitorAdapter() {
         stack.push(operand)
     }
 
+    override fun visit(expr: SQLPropertyExpr): Boolean {
+        stack.push(expr)
+        return true
+    }
+
+    override fun endVisit(expr: SQLPropertyExpr) {
+        val operand = stack.pop() as EvalObject
+        stack.pop()
+        stack.push(operand[expr.name, expr])
+    }
+
     override fun visit(x: SQLNotExpr): Boolean {
         stack.push(x)
         return true
@@ -117,7 +128,7 @@ class EvaluatorVisitor() : SQLASTVisitorAdapter() {
             }
             processBooleanOperation(x, left, right) -> {
             }
-            processEqualOperation(x, left, right) -> {
+            processEqualityOperation(x, left, right) -> {
             }
             else -> throw UnsupportedFeatureException(x.toString())
         }
@@ -159,7 +170,7 @@ class EvaluatorVisitor() : SQLASTVisitorAdapter() {
         return false
     }
 
-    private fun processEqualOperation(expr: SQLBinaryOpExpr, left: Operand, right: Operand): Boolean {
+    private fun processEqualityOperation(expr: SQLBinaryOpExpr, left: Operand, right: Operand): Boolean {
         return when (expr.operator) {
             SQLBinaryOperator.Equality -> equal(expr, left, right)
             SQLBinaryOperator.NotEqual -> notEqual(expr, left, right)

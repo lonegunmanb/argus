@@ -111,8 +111,5 @@ internal class PojoObjectTest {
         assertEquals(nestedExpr, cityProperty.expr)
     }
 
-    private data class Person(val name: String, val age: Int, val address: Address?)
-    private data class Address(val address: String, val city: String)
-
     private fun pojoObject(i: Any) = PojoObject(i, "test", DummyExpr())
 }
