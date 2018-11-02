@@ -73,7 +73,11 @@ class JsonObjectTest {
             "select * from person as p where p.address.city='city1', true",
             "select * from person as p where p.age > 9 and p.address.address='address1', true",
             "select * from person as p where p.age > 10, false",
-            "select * from person as p where p.notexist='notexist', null")
+            "select * from person as p where p.age + 1 > 10, true",
+            "select * from person as p where p.notexist='notexist', null",
+            "select * from person where address.city='city1', true",
+            "select * from person where address.city='city1' and name='Peter', true",
+            "select * from p where address.city='city1' and p.name='Peter', true")
     fun pojoValidationTest(sql: String, expected: String) {
         val statement = SQLUtils.parseStatements(sql, JdbcConstants.POSTGRESQL)[0]
         val expr = ((statement as SQLSelectStatement).select.query as SQLSelectQueryBlock).where!!

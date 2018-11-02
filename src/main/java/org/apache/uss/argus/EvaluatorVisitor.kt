@@ -57,7 +57,7 @@ class EvaluatorVisitor() : SQLASTVisitorAdapter() {
         val obj = stack.pop() as EvalObject
         val operand = when (expr.name) {
             obj.objectName -> obj
-            else -> obj[obj.objectName, expr]
+            else -> obj[expr.name, expr]
         }
         stack.push(operand)
     }
