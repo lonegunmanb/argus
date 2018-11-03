@@ -48,7 +48,7 @@ internal class PojoObjectBindingTest {
             "p.address.notexisted, null",
             "p.notexisted.city, null")
     fun propertyGetTest(sql: String, expected: String) {
-        val address = Address("address1", "city1")
+        val address = Address("address1", "city1", null)
         val person = Person("name1", 10, address, true)
         val expr = SQLUtils.toSQLExpr(sql, JdbcConstants.POSTGRESQL)
         val visitor = EvaluatorVisitor(parameter(person))
@@ -67,7 +67,7 @@ internal class PojoObjectBindingTest {
             "select * from person as p where p.age > 10, false",
             "select * from person as p where p.notexist='notexist', null")
     fun pojoValidationTest(sql: String, expected: String) {
-        val address = Address("address1", "city1")
+        val address = Address("address1", "city1", null)
         val person = Person("name1", 10, address, true)
         val statement = SQLUtils.parseStatements(sql, JdbcConstants.POSTGRESQL)[0]
         val expr = ((statement as SQLSelectStatement).select.query as SQLSelectQueryBlock).where!!
@@ -79,6 +79,17 @@ internal class PojoObjectBindingTest {
             "true" -> assertTrue(r as Boolean)
             "false" -> assertFalse(r as Boolean)
         }
+    }
+
+    @Test
+    fun pojoArrayPropertyAccessTest() {
+        val address = Address("address1", "city1", arrayOf(BigDecimal("1.1"), BigDecimal("2.2")))
+        val sql = "select * from address as p where p.latlong[1]=1.1 and latlong[2]=2.2"
+        val statement = SQLUtils.parseStatements(sql, JdbcConstants.POSTGRESQL)[0]
+        val expr = ((statement as SQLSelectStatement).select.query as SQLSelectQueryBlock).where!!
+        val visitor = EvaluatorVisitor(parameter(address))
+        expr.accept(visitor)
+        assertTrue((visitor.value as Operand).getOperand<Boolean>()!!)
     }
 
     private fun getOperand(visitor: EvaluatorVisitor): Any? {

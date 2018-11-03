@@ -10,13 +10,12 @@ import kotlin.reflect.KClass
 import com.google.gson.JsonObject as JObject
 
 class JsonObject : EvalObject {
-
     private val json: String?
 
     object gson {
+
         val instance = Gson()
     }
-
     private val jsonElement: JsonElement
 
     constructor(json: String?, name: String, expr: SQLExpr) : super(name, expr) {
@@ -29,19 +28,23 @@ class JsonObject : EvalObject {
         this.jsonElement = jsonElement
     }
 
-    override fun get(index: String, expr: SQLExpr): EvalObject {
+    override fun get(property: String, expr: SQLExpr): EvalObject {
         return when (jsonElement) {
-            is JsonPrimitive -> PojoObject(EvaluatorVisitor.Nil, index, expr)
+            is JsonPrimitive -> PojoObject(EvaluatorVisitor.Nil, property, expr)
             is JObject -> {
-                when (jsonElement.has(index)) {
-                    true -> JsonObject(jsonElement.get(index), index, expr)
-                    false -> PojoObject(EvaluatorVisitor.Nil, index, expr)
+                when (jsonElement.has(property)) {
+                    true -> JsonObject(jsonElement.get(property), property, expr)
+                    false -> PojoObject(EvaluatorVisitor.Nil, property, expr)
                 }
             }
             else -> {
                 throw UnsupportedOperationException()
             }
         }
+    }
+
+    override fun get(index: Int, expr: SQLExpr): EvalObject {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
     override fun operand(clazz: KClass<*>): Any? {
@@ -65,6 +68,7 @@ class JsonObject : EvalObject {
             clazz == Boolean::class -> isBoolean(content)
             Number::class.java.isAssignableFrom(clazz.java) -> isNumber(content)
             clazz == String::class -> true
+            clazz.java.isArray -> jsonElement.isJsonArray
             else -> throw UnsupportedOperationException("Don't support ${clazz.simpleName}")
         }
     }

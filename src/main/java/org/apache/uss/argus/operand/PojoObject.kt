@@ -2,10 +2,11 @@ package org.apache.uss.argus.operand
 
 import com.alibaba.druid.sql.ast.SQLExpr
 import org.apache.uss.argus.EvaluatorVisitor
+import java.lang.reflect.Array
 import java.lang.reflect.Method
 import kotlin.reflect.KClass
 
-class PojoObject(private val `object`: Any, parameterName: String, expr: SQLExpr) : EvalObject(parameterName, expr) {
+class PojoObject(private val `object`: Any, objectName: String, expr: SQLExpr) : EvalObject(objectName, expr) {
     override fun operand(clazz: KClass<*>): Any? {
         return when {
             isType(clazz) -> `object`
@@ -16,6 +17,7 @@ class PojoObject(private val `object`: Any, parameterName: String, expr: SQLExpr
     override fun isType(clazz: KClass<*>): Boolean {
         return when (`object`) {
             EvaluatorVisitor.Nil -> true
+            clazz.java.isArray -> `object`.javaClass.isArray
             else -> clazz.java.isAssignableFrom(`object`.javaClass)
         }
     }
@@ -24,15 +26,15 @@ class PojoObject(private val `object`: Any, parameterName: String, expr: SQLExpr
         return `object` == EvaluatorVisitor.Nil
     }
 
-    override fun get(index: String, expr: SQLExpr): EvalObject {
+    override fun get(property: String, expr: SQLExpr): EvalObject {
         if (isNil()) {
-            return PojoObject(EvaluatorVisitor.Nil, index, expr)
+            return PojoObject(EvaluatorVisitor.Nil, property, expr)
         }
-        val getMethodName = "get${index.capitalize()}"
+        val getMethodName = "get${property.capitalize()}"
         val method: Method? = try {
             `object`.javaClass.getMethod(getMethodName)
         } catch (e: NoSuchMethodException) {
-            return PojoObject(EvaluatorVisitor.Nil, index, expr)
+            return PojoObject(EvaluatorVisitor.Nil, property, expr)
         }
         val value = when (method) {
             null -> EvaluatorVisitor.Nil
@@ -40,6 +42,15 @@ class PojoObject(private val `object`: Any, parameterName: String, expr: SQLExpr
                 method.invoke(`object`)
             }
         }
-        return PojoObject(value, index, expr)
+        return PojoObject(value, property, expr)
+    }
+
+    override fun get(index: Int, expr: SQLExpr): EvalObject {
+        val name = "$objectName[$index]"
+        return try {
+            PojoObject(Array.get(`object`, /*in pg, array index start at 1*/index - 1), name, expr)
+        } catch (e: ArrayIndexOutOfBoundsException) {
+            PojoObject(EvaluatorVisitor.Nil, name, expr)
+        }
     }
 }

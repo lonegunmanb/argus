@@ -96,7 +96,7 @@ internal class PojoObjectTest {
         val nestedExpr = DummyExpr()
         val exactlyAddress = "somewhere"
         val city = "over the rainbow"
-        val address = Address(exactlyAddress, city)
+        val address = Address(exactlyAddress, city, null)
         val person = Person("Peter", 20, address, true)
 
         val p = pojoObject(person)
@@ -106,6 +106,23 @@ internal class PojoObjectTest {
         assertEquals(nestedExpr, addressNameProperty.expr)
         assertEquals(city, cityProperty.getOperand<String>())
         assertEquals(nestedExpr, cityProperty.expr)
+    }
+
+    @Test
+    fun getArrayIndexTest() {
+        val array = intArrayOf(1, 2, 3)
+        val obj = pojoObject(array)
+        assertEquals(array[0], obj[1, DummyExpr()].getOperand<Int>())
+        assertEquals(array[1], obj[2, DummyExpr()].getOperand<Int>())
+        assertEquals(array[2], obj[3, DummyExpr()].getOperand<Int>())
+    }
+
+    @Test
+    fun indexOutOfRangeTest() {
+        val array = intArrayOf(1, 2, 3)
+        val obj = pojoObject(array)
+        assertTrue(obj[4, DummyExpr()].isNil())
+        assertTrue(obj[0, DummyExpr()].isNil())
     }
 
     private fun pojoObject(i: Any) = PojoObject(i, "test", DummyExpr())

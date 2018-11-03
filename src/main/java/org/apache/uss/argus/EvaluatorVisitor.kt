@@ -8,7 +8,6 @@ import org.apache.uss.argus.operand.EvalObject
 import org.apache.uss.argus.operand.EvaluatedOperand
 import org.apache.uss.argus.operand.Operand
 import org.springframework.util.NumberUtils
-
 import java.math.BigDecimal
 import java.math.BigInteger
 import java.util.*
@@ -69,9 +68,31 @@ class EvaluatorVisitor() : SQLASTVisitorAdapter() {
 
     override fun endVisit(expr: SQLPropertyExpr) {
         val operand = stack.pop() as EvalObject
-        stack.pop()
+        popPlaceholderFromStack()
         stack.push(operand[expr.name, expr])
     }
+
+    override fun visit(expr: SQLArrayExpr): Boolean {
+        if (expr.values.size != 1) {
+            throw UnsupportedFeatureException("One demension array only")
+        }
+        stack.push(expr)
+        return true
+    }
+
+    override fun endVisit(expr: SQLArrayExpr) {
+        val index = getOperand<BigDecimal>((stack.pop() as EvaluatedOperand))
+        { TypeMismatchException("Required Int, got: $expr") }
+        val operand = stack.pop() as EvalObject
+        if (!isArray(operand)) {
+            throw TypeMismatchException("Required array, got " + expr.toString())
+        }
+        popPlaceholderFromStack()
+        val evalObject = operand[index.intValueExact(), expr]
+        stack.push(evalObject)
+    }
+
+    private fun isArray(operand: Operand) = operand.isType<Array<Any>>()
 
     override fun visit(x: SQLNotExpr): Boolean {
         stack.push(x)
@@ -80,9 +101,9 @@ class EvaluatorVisitor() : SQLASTVisitorAdapter() {
 
     override fun endVisit(x: SQLNotExpr) {
         val operandExpr = stack.pop() as Operand
-        val operand = operandExpr.getOperand<Boolean>()
-                ?: throw TypeMismatchException("Require Boolean, got :" + operandExpr.toString())
-        stack.pop()
+        val operand = getOperand<Boolean>(operandExpr)
+        { TypeMismatchException("Require Boolean, got :" + operandExpr.toString()) }
+        popPlaceholderFromStack()
         stack.push(EvaluatedOperand(x, !operand))
     }
 
@@ -101,11 +122,11 @@ class EvaluatorVisitor() : SQLASTVisitorAdapter() {
         val func: ((Operand) -> Any) = when (x.operator) {
             SQLUnaryOperator.Not -> this::flipBoolean
             SQLUnaryOperator.NOT -> this::flipBoolean
-            SQLUnaryOperator.Negative -> this::negative
             SQLUnaryOperator.Plus -> this::numberItSelf
+            SQLUnaryOperator.Negative -> this::negative
             else -> throw UnsupportedFeatureException(x.toString())
         }
-        stack.pop()
+        popPlaceholderFromStack()
         stack.push(EvaluatedOperand(x, func(operandExpr)))
     }
 
@@ -117,18 +138,17 @@ class EvaluatorVisitor() : SQLASTVisitorAdapter() {
     override fun endVisit(x: SQLBinaryOpExpr) {
         val right = stack.pop() as Operand
         val left = stack.pop() as Operand
-        @Suppress("UNUSED_VARIABLE")
-        val popBinaryExprFromStack = stack.pop()
+        popPlaceholderFromStack()
         when {
             processIsAndIsNot(left, right, x) -> {
             }
             nullInBinaryOp(left, right, x) -> {
             }
-            processNumericOperation(x, left, right) -> {
+            processNumericOperation(left, right, x) -> {
             }
-            processBooleanOperation(x, left, right) -> {
+            processBooleanOperation(left, right, x) -> {
             }
-            processEqualityOperation(x, left, right) -> {
+            processEqualityOperation(left, right, x) -> {
             }
             else -> throw UnsupportedFeatureException(x.toString())
         }
@@ -170,7 +190,7 @@ class EvaluatorVisitor() : SQLASTVisitorAdapter() {
         return false
     }
 
-    private fun processEqualityOperation(expr: SQLBinaryOpExpr, left: Operand, right: Operand): Boolean {
+    private fun processEqualityOperation(left: Operand, right: Operand, expr: SQLBinaryOpExpr): Boolean {
         return when (expr.operator) {
             SQLBinaryOperator.Equality -> equal(expr, left, right)
             SQLBinaryOperator.NotEqual -> notEqual(expr, left, right)
@@ -217,7 +237,7 @@ class EvaluatorVisitor() : SQLASTVisitorAdapter() {
         return true
     }
 
-    private fun processBooleanOperation(expr: SQLBinaryOpExpr, left: Operand, right: Operand): Boolean {
+    private fun processBooleanOperation(left: Operand, right: Operand, expr: SQLBinaryOpExpr): Boolean {
         val action: ((SQLExpr, Boolean, Boolean) -> Unit) =
                 when (expr.operator) {
                     SQLBinaryOperator.BooleanAnd -> {
@@ -244,7 +264,7 @@ class EvaluatorVisitor() : SQLASTVisitorAdapter() {
         return true
     }
 
-    private fun processNumericOperation(expr: SQLBinaryOpExpr, left: Operand, right: Operand): Boolean {
+    private fun processNumericOperation(left: Operand, right: Operand, expr: SQLBinaryOpExpr): Boolean {
         val action: ((SQLExpr, BigDecimal, BigDecimal) -> Unit)? =
                 when (expr.operator) {
                     SQLBinaryOperator.Add -> this::add
@@ -363,5 +383,13 @@ class EvaluatorVisitor() : SQLASTVisitorAdapter() {
                 }
             }
         }
+    }
+
+    private fun popPlaceholderFromStack() {
+        stack.pop()
+    }
+
+    private inline fun <reified T> getOperand(operand: Operand, onNull: () -> Exception): T {
+        return operand.getOperand<T>() ?: throw onNull()
     }
 }

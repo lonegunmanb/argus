@@ -19,7 +19,7 @@ class JsonObjectTest {
 
     private var json: String
     private val jsonObject: JsonObject
-    private val address: Address = Address("address1", "city1")
+    private val address: Address = Address("address1", "city1", arrayOf(BigDecimal(1.1), BigDecimal(2.2)))
     private val person: Person = Person("Peter", 10, address, true)
 
     init {
