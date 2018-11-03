@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
+import org.junit.jupiter.params.provider.ValueSource
 import java.math.BigDecimal
 
 internal class PojoObjectBindingTest {
@@ -81,15 +82,30 @@ internal class PojoObjectBindingTest {
         }
     }
 
-    @Test
-    fun pojoArrayPropertyAccessTest() {
-        val address = Address("address1", "city1", arrayOf(BigDecimal("1.1"), BigDecimal("2.2")))
-        val sql = "select * from address as p where p.latlong[1]=1.1 and latlong[2]=2.2"
+    @ParameterizedTest
+    @ValueSource(strings = arrayOf(
+            "select * from address as p where p.latlong[1]=1.1 and latlong[2]=2.2",
+            "select * from address as p where p.latlong[p.latlong[1]]=1.1"
+    ))
+    fun pojoArrayPropertyAccessTest(sql: String) {
+        val address = Address("address1", "city1", arrayOf(BigDecimal("1.1"), BigDecimal("2.2"), BigDecimal("3.3")))
+
         val statement = SQLUtils.parseStatements(sql, JdbcConstants.POSTGRESQL)[0]
         val expr = ((statement as SQLSelectStatement).select.query as SQLSelectQueryBlock).where!!
         val visitor = EvaluatorVisitor(parameter(address))
         expr.accept(visitor)
         assertTrue((visitor.value as Operand).getOperand<Boolean>()!!)
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = arrayOf(
+            "select * from address as p where p.latlong[1.4]=1.1",
+            "select * from address as p where p.latlong[1.5]=2.2",
+            "select * from address as p where p.latlong[2.4]=2.2",
+            "select * from address as p where p.latlong[2.5]=3.3"
+    ))
+    fun decimalArrayIndexShouldRoundHalfUp(sql: String) {
+        pojoArrayPropertyAccessTest(sql)
     }
 
     private fun getOperand(visitor: EvaluatorVisitor): Any? {

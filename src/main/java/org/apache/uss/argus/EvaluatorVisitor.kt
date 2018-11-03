@@ -10,6 +10,7 @@ import org.apache.uss.argus.operand.Operand
 import org.springframework.util.NumberUtils
 import java.math.BigDecimal
 import java.math.BigInteger
+import java.math.RoundingMode
 import java.util.*
 
 class EvaluatorVisitor() : SQLASTVisitorAdapter() {
@@ -81,14 +82,15 @@ class EvaluatorVisitor() : SQLASTVisitorAdapter() {
     }
 
     override fun endVisit(expr: SQLArrayExpr) {
-        val index = getOperand<BigDecimal>((stack.pop() as EvaluatedOperand))
+        val index = getOperand<BigDecimal>((stack.pop() as Operand))
         { TypeMismatchException("Required Int, got: $expr") }
         val operand = stack.pop() as EvalObject
         if (!isArray(operand)) {
             throw TypeMismatchException("Required array, got " + expr.toString())
         }
         popPlaceholderFromStack()
-        val evalObject = operand[index.intValueExact(), expr]
+        val roundedIndex = index.setScale(0, RoundingMode.HALF_UP).toInt()
+        val evalObject = operand[roundedIndex, expr]
         stack.push(evalObject)
     }
 
