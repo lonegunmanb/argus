@@ -82,7 +82,7 @@ class EvaluatorVisitor() : SQLASTVisitorAdapter() {
     }
 
     override fun endVisit(expr: SQLArrayExpr) {
-        val index = getOperand<BigDecimal>((stack.pop() as Operand))
+        val index = popStackOperand<BigDecimal>()
         { TypeMismatchException("Required Int, got: $expr") }
         val operand = stack.pop() as EvalObject
         if (!isArray(operand)) {
@@ -102,9 +102,8 @@ class EvaluatorVisitor() : SQLASTVisitorAdapter() {
     }
 
     override fun endVisit(x: SQLNotExpr) {
-        val operandExpr = stack.pop() as Operand
-        val operand = getOperand<Boolean>(operandExpr)
-        { TypeMismatchException("Require Boolean, got :" + operandExpr.toString()) }
+        val operand = popStackOperand<Boolean>()
+        { operandExpr -> TypeMismatchException("Require Boolean, got :" + operandExpr.toString()) }
         popPlaceholderFromStack()
         stack.push(EvaluatedOperand(x, !operand))
     }
@@ -391,7 +390,8 @@ class EvaluatorVisitor() : SQLASTVisitorAdapter() {
         stack.pop()
     }
 
-    private inline fun <reified T> getOperand(operand: Operand, onNull: () -> Exception): T {
-        return operand.getOperand<T>() ?: throw onNull()
+    private inline fun <reified T> popStackOperand(onNull: (Operand) -> Exception): T {
+        val operand = stack.pop() as Operand
+        return operand.getOperand<T>() ?: throw onNull(operand)
     }
 }
