@@ -3,9 +3,11 @@ package org.apache.uss.argus.operand
 import com.alibaba.druid.sql.ast.SQLExpr
 import com.alibaba.druid.util.StringUtils.isNumber
 import com.google.gson.Gson
+import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.google.gson.JsonPrimitive
 import org.apache.uss.argus.EvaluatorVisitor
+import org.apache.uss.argus.TypeMismatchException
 import kotlin.reflect.KClass
 import com.google.gson.JsonObject as JObject
 
@@ -16,6 +18,7 @@ class JsonObject : EvalObject {
 
         val instance = Gson()
     }
+
     private val jsonElement: JsonElement
 
     constructor(json: String?, name: String, expr: SQLExpr) : super(name, expr) {
@@ -44,7 +47,10 @@ class JsonObject : EvalObject {
     }
 
     override fun get(index: Int, expr: SQLExpr): EvalObject {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return when (jsonElement) {
+            is JsonArray -> JsonObject(jsonElement[index - 1], "$objectName[$index]", expr)
+            else -> throw TypeMismatchException("Required array, got: ${jsonElement.asString}")
+        }
     }
 
     override fun operand(clazz: KClass<*>): Any? {
@@ -63,10 +69,9 @@ class JsonObject : EvalObject {
         if (jsonElement.isJsonNull) {
             return true
         }
-        val content = jsonElement.asString
         return when {
-            clazz == Boolean::class -> isBoolean(content)
-            Number::class.java.isAssignableFrom(clazz.java) -> isNumber(content)
+            clazz == Boolean::class -> isBoolean(jsonElement.asString)
+            Number::class.java.isAssignableFrom(clazz.java) -> isNumber(jsonElement.asString)
             clazz == String::class -> true
             clazz.java.isArray -> jsonElement.isJsonArray
             else -> throw UnsupportedOperationException("Don't support ${clazz.simpleName}")

@@ -19,7 +19,7 @@ class JsonObjectTest {
 
     private var json: String
     private val jsonObject: JsonObject
-    private val address: Address = Address("address1", "city1", arrayOf(BigDecimal(1.1), BigDecimal(2.2)))
+    private val address: Address = Address("address1", "city1", arrayOf(BigDecimal("1.1"), BigDecimal("2.2")))
     private val person: Person = Person("Peter", 10, address, true)
 
     init {
@@ -68,6 +68,13 @@ class JsonObjectTest {
         assertEquals(address.address, jsonObject["address", DummyExpr()]["address", DummyExpr()].getOperand<String>())
     }
 
+    @Test
+    fun getArrayItemTest() {
+        val arrayProperty = jsonObject["address", DummyExpr()]["latlong", DummyExpr()]
+        assertEquals(BigDecimal("1.1"), arrayProperty[1, DummyExpr()].getOperand<Number>())
+        assertEquals(BigDecimal("2.2"), arrayProperty[2, DummyExpr()].getOperand<Number>())
+    }
+
     @ParameterizedTest
     @CsvSource("select * from person as p where p.name='Peter', true",
             "select * from person as p where p.address.city='city1', true",
@@ -78,7 +85,7 @@ class JsonObjectTest {
             "select * from person where address.city='city1', true",
             "select * from person where address.city='city1' and name='Peter', true",
             "select * from p where address.city='city1' and p.name='Peter', true")
-    fun pojoValidationTest(sql: String, expected: String) {
+    fun jsonObjectValidationTest(sql: String, expected: String) {
         val statement = SQLUtils.parseStatements(sql, JdbcConstants.POSTGRESQL)[0]
         val expr = ((statement as SQLSelectStatement).select.query as SQLSelectQueryBlock).where!!
         val visitor = EvaluatorVisitor(jsonObject)
@@ -89,6 +96,16 @@ class JsonObjectTest {
             "true" -> assertTrue(r as Boolean)
             "false" -> assertFalse(r as Boolean)
         }
+    }
+
+    @Test
+    fun jsonObjectArrayAccessTest() {
+        val sql = "select * from person where address.latlong[1]='1.1'"
+        val statement = SQLUtils.parseStatements(sql, JdbcConstants.POSTGRESQL)[0]
+        val expr = ((statement as SQLSelectStatement).select.query as SQLSelectQueryBlock).where!!
+        val visitor = EvaluatorVisitor(jsonObject)
+        expr.accept(visitor)
+        assertTrue((visitor.value as Operand).getOperand<Boolean>()!!)
     }
 
     private inline fun <reified T> assertType(index: String, expected: Boolean) {
