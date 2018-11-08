@@ -6,8 +6,8 @@ import com.google.gson.Gson
 import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.google.gson.JsonPrimitive
-import org.apache.uss.argus.EvaluatorVisitor
 import org.apache.uss.argus.TypeMismatchException
+import org.apache.uss.argus.visitor.EvaluatorVisitor
 import kotlin.reflect.KClass
 import com.google.gson.JsonObject as JObject
 

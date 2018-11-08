@@ -1,4 +1,4 @@
-package org.apache.uss.argus
+package org.apache.uss.argus.visitor
 
 import com.alibaba.druid.sql.ast.statement.SQLExprTableSource
 import com.alibaba.druid.sql.visitor.SQLASTVisitorAdapter

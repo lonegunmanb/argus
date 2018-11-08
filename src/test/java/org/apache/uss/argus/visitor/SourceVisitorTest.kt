@@ -2,7 +2,6 @@ package org.apache.uss.argus.visitor
 
 import com.alibaba.druid.sql.SQLUtils
 import com.alibaba.druid.util.JdbcConstants
-import org.apache.uss.argus.SourceVisitor
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import kotlin.test.assertEquals

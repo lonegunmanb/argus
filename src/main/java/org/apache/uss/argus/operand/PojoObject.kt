@@ -1,7 +1,7 @@
 package org.apache.uss.argus.operand
 
 import com.alibaba.druid.sql.ast.SQLExpr
-import org.apache.uss.argus.EvaluatorVisitor
+import org.apache.uss.argus.visitor.EvaluatorVisitor
 import java.lang.reflect.Array
 import java.lang.reflect.Method
 import kotlin.reflect.KClass

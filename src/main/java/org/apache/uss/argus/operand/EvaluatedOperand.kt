@@ -1,7 +1,7 @@
 package org.apache.uss.argus.operand
 
 import com.alibaba.druid.sql.ast.SQLExpr
-import org.apache.uss.argus.EvaluatorVisitor
+import org.apache.uss.argus.visitor.EvaluatorVisitor
 import kotlin.reflect.KClass
 
 class EvaluatedOperand(expr: SQLExpr, private val operandEvaluated: Any) : Operand(expr) {

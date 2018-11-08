@@ -1,6 +1,6 @@
 package org.apache.uss.argus.operand
 
-import org.apache.uss.argus.EvaluatorVisitor
+import org.apache.uss.argus.visitor.EvaluatorVisitor
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.provider.ValueSource

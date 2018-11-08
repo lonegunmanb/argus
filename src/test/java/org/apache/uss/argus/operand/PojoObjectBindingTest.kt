@@ -4,7 +4,7 @@ import com.alibaba.druid.sql.SQLUtils
 import com.alibaba.druid.sql.ast.statement.SQLSelectQueryBlock
 import com.alibaba.druid.sql.ast.statement.SQLSelectStatement
 import com.alibaba.druid.util.JdbcConstants
-import org.apache.uss.argus.EvaluatorVisitor
+import org.apache.uss.argus.visitor.EvaluatorVisitor
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest

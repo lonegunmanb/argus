@@ -2,8 +2,8 @@ package org.apache.uss.argus.expr;
 
 import com.alibaba.druid.sql.SQLUtils;
 import com.alibaba.druid.util.JdbcConstants;
-import org.apache.uss.argus.EvaluatorVisitor;
 import org.apache.uss.argus.operand.EvaluatedOperand;
+import org.apache.uss.argus.visitor.EvaluatorVisitor;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;

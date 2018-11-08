@@ -5,7 +5,7 @@ import com.alibaba.druid.sql.ast.statement.SQLSelectQueryBlock
 import com.alibaba.druid.sql.ast.statement.SQLSelectStatement
 import com.alibaba.druid.util.JdbcConstants
 import com.google.gson.Gson
-import org.apache.uss.argus.EvaluatorVisitor
+import org.apache.uss.argus.visitor.EvaluatorVisitor
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
