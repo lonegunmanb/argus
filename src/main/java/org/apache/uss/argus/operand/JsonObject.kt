@@ -21,12 +21,12 @@ class JsonObject : EvalObject {
 
     private val jsonElement: JsonElement
 
-    constructor(json: String?, name: String, expr: SQLExpr) : super(name, expr) {
+    constructor(json: String?, name: String, alias: String?, expr: SQLExpr) : super(name, alias, expr) {
         this.json = json
         this.jsonElement = gson.instance.fromJson(json, JsonElement::class.java)
     }
 
-    private constructor(jsonElement: JsonElement, name: String, expr: SQLExpr) : super(name, expr) {
+    private constructor(jsonElement: JsonElement, name: String, expr: SQLExpr) : super(name, null, expr) {
         json = null
         this.jsonElement = jsonElement
     }

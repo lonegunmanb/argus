@@ -25,7 +25,7 @@ class JsonObjectTest {
     init {
         val gson = Gson()
         json = gson.toJson(person)
-        jsonObject = JsonObject(json, "p", DummyExpr())
+        jsonObject = JsonObject(json, "person", "p", DummyExpr())
     }
 
     @Test
@@ -84,7 +84,9 @@ class JsonObjectTest {
             "select * from person as p where p.notexist='notexist', null",
             "select * from person where address.city='city1', true",
             "select * from person where address.city='city1' and name='Peter', true",
-            "select * from p where address.city='city1' and p.name='Peter', true")
+            "select * from p where address.city='city1' and p.name='Peter', true",
+            "select * from person where person.address.city='city1', true",
+            "select * from person as p where address.city='city1', true")
     fun jsonObjectValidationTest(sql: String, expected: String) {
         val statement = SQLUtils.parseStatements(sql, JdbcConstants.POSTGRESQL)[0]
         val expr = ((statement as SQLSelectStatement).select.query as SQLSelectQueryBlock).where!!

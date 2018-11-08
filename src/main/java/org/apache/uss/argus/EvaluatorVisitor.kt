@@ -64,6 +64,7 @@ class EvaluatorVisitor : SQLASTVisitorAdapter {
         val source = stack.pop() as EvalObject
         val operand = when (expr.name) {
             source.objectName -> source
+            source.alias -> source
             else -> source[expr.name, expr]
         }
         stack.push(operand)
