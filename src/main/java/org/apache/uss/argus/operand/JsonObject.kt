@@ -14,7 +14,7 @@ import com.google.gson.JsonObject as JObject
 class JsonObject : EvalObject {
     private val json: String?
 
-    object gson {
+    private object gson {
 
         val instance = Gson()
     }
@@ -41,14 +41,14 @@ class JsonObject : EvalObject {
                 }
             }
             else -> {
-                throw UnsupportedOperationException()
+                throw UnsupportedOperationException(jsonElement.toString())
             }
         }
     }
 
-    override fun get(index: Int, expr: SQLExpr): EvalObject {
+    override fun get(sqlArrayIndex: Int, expr: SQLExpr): EvalObject {
         return when (jsonElement) {
-            is JsonArray -> JsonObject(jsonElement[index - 1], "$objectName[$index]", expr)
+            is JsonArray -> JsonObject(jsonElement[sqlArrayIndex - 1], "$objectName[$sqlArrayIndex]", expr)
             else -> throw TypeMismatchException("Required array, got: ${jsonElement.asString}")
         }
     }
@@ -59,7 +59,7 @@ class JsonObject : EvalObject {
         }
         return when {
             clazz == Boolean::class -> jsonElement.asBoolean
-            Number::class.java.isAssignableFrom(clazz.java) -> jsonElement.asBigDecimal
+            Number::class.java.isAssignableFrom(clazz.java) -> if (isType(Number::class)) jsonElement.asBigDecimal else null
             clazz == String::class -> jsonElement.asString
             else -> throw UnsupportedOperationException("Don't support ${clazz.simpleName}")
         }

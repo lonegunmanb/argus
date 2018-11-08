@@ -15,7 +15,7 @@ class EvaluatedOperand(expr: SQLExpr, private val operandEvaluated: Any) : Opera
     }
 
     override fun isNil(): Boolean {
-        return operandEvaluated == EvaluatorVisitor.Nil
+        return operandEvaluated === EvaluatorVisitor.Nil
     }
 
     fun getJavaOperand(): Any? {
