@@ -11,6 +11,7 @@ import org.apache.uss.argus.function.FunctionCalls
 import org.apache.uss.argus.operand.EvalObject
 import org.apache.uss.argus.operand.EvaluatedOperand
 import org.apache.uss.argus.operand.Operand
+import org.apache.uss.argus.operand.ValidationObject
 import org.springframework.util.NumberUtils
 import java.math.BigDecimal
 import java.math.BigInteger
@@ -25,6 +26,10 @@ class EvaluatorVisitor : SQLASTVisitorAdapter {
 
     private val stack: Stack<Any> = Stack()
     private val source: EvalObject?
+    private val inValidationMode: Boolean
+        get() {
+            return source != null && source is ValidationObject
+        }
 
     constructor() : this(null)
 
@@ -368,7 +373,8 @@ class EvaluatorVisitor : SQLASTVisitorAdapter {
 
     private fun divide(expr: SQLExpr, left: BigDecimal, right: BigDecimal) {
         try {
-            stack.push(EvaluatedOperand(expr, left.divide(right)))
+            val divisor = if (inValidationMode && right == BigDecimal.ZERO) BigDecimal.ONE else right
+            stack.push(EvaluatedOperand(expr, left.divide(divisor)))
         } catch (e: ArithmeticException) {
             throw ArithmeticException(expr.toString())
         }

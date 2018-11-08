@@ -2,6 +2,9 @@ package org.apache.uss.argus
 
 import com.alibaba.druid.sql.SQLUtils
 import com.alibaba.druid.sql.ast.SQLStatement
+import com.alibaba.druid.sql.ast.expr.SQLIdentifierExpr
+import org.apache.uss.argus.operand.ValidationObject
+import org.apache.uss.argus.visitor.EvaluatorVisitor
 import org.apache.uss.argus.visitor.SourceVisitor
 
 class SQLEvaluator(val sql: String, val dbType: String) {
@@ -14,11 +17,13 @@ class SQLEvaluator(val sql: String, val dbType: String) {
     companion object {
         fun compile(sql: String, dbType: String): SQLEvaluator {
             val evaluator = SQLEvaluator(sql, dbType)
-            evaluator.statement = parseStatement(sql, dbType)
+            val statement = parseStatement(sql, dbType)
+            evaluator.statement = statement
             val sourceVisitor = SourceVisitor()
             evaluator.statement!!.accept(sourceVisitor)
             evaluator.source = sourceVisitor.source
             evaluator.sourceAlias = sourceVisitor.alias
+            validateStatement(statement, sourceVisitor.source, evaluator.sourceAlias)
             return evaluator
         }
 
@@ -33,6 +38,11 @@ class SQLEvaluator(val sql: String, val dbType: String) {
                 throw ParserException("only one sql supported.")
             }
             return statements[0]
+        }
+
+        fun validateStatement(statement: SQLStatement, sourceName: String, sourceAlias: String?) {
+            val visitor = EvaluatorVisitor(ValidationObject(sourceName, sourceAlias, /*TODO: a temp workaround*/SQLIdentifierExpr(sourceName)))
+            statement.accept(visitor)
         }
     }
 }
