@@ -81,22 +81,21 @@ class JsonObjectTest {
             "select * from person as p where p.age > 9 and p.address.address='address1', true",
             "select * from person as p where p.age > 10, false",
             "select * from person as p where p.age + 1 > 10, true",
-            "select * from person as p where p.notexist='notexist', null",
+            "select * from person as p where p.notexist='notexist', ",
             "select * from person where address.city='city1', true",
             "select * from person where address.city='city1' and name='Peter', true",
             "select * from p where address.city='city1' and p.name='Peter', true",
             "select * from person where person.address.city='city1', true",
             "select * from person as p where address.city='city1', true")
-    fun jsonObjectValidationTest(sql: String, expected: String) {
+    fun jsonObjectValidationTest(sql: String, expected: Boolean?) {
         val statement = SQLUtils.parseStatements(sql, JdbcConstants.POSTGRESQL)[0]
         val expr = ((statement as SQLSelectStatement).select.query as SQLSelectQueryBlock).where!!
         val visitor = EvaluatorVisitor(jsonObject)
         expr.accept(visitor)
         val r = (visitor.value as Operand).operand(Any::class)
         when (expected) {
-            "null" -> Assertions.assertEquals(EvaluatorVisitor.Nil, r)
-            "true" -> assertTrue(r as Boolean)
-            "false" -> assertFalse(r as Boolean)
+            null -> Assertions.assertEquals(EvaluatorVisitor.Nil, r)
+            else -> assertEquals(expected, r as Boolean)
         }
     }
 
