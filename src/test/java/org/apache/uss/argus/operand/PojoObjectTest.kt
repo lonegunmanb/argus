@@ -72,6 +72,13 @@ internal class PojoObjectTest {
     }
 
     @Test
+    fun accessBooleanPropertyStartWithIsTest() {
+        val person = Person("name", 10, null, true)
+        val parameter = pojoObject(person)
+        assertTrue(parameter["isMale", DummyExpr()].getOperand<Boolean>()!!)
+    }
+
+    @Test
     fun getPropertyFromObjectTest() {
         val expr = DummyExpr()
         val name = "Peter"

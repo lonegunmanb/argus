@@ -5,6 +5,11 @@ import kotlin.reflect.KClass
 
 abstract class Operand(val expr: SQLExpr?) {
 
+    var alias: String? = null
+        internal set
+    var objectName: String? = null
+        internal set
+
     inline fun <reified T> getOperand(): T? {
         return this.operand(T::class) as? T
     }

@@ -4,6 +4,7 @@ import com.alibaba.druid.sql.ast.SQLExpr
 import com.alibaba.druid.sql.ast.expr.*
 import com.alibaba.druid.sql.ast.expr.SQLBinaryOperator.*
 import com.alibaba.druid.sql.ast.expr.SQLUnaryOperator.*
+import com.alibaba.druid.sql.ast.statement.SQLSelectItem
 import com.alibaba.druid.sql.visitor.SQLASTVisitorAdapter
 import org.apache.uss.argus.TypeMismatchException
 import org.apache.uss.argus.UnsupportedFeatureException
@@ -30,11 +31,31 @@ class EvaluatorVisitor : SQLASTVisitorAdapter {
         get() {
             return source != null && source is ValidationObject
         }
+    internal val outputs: LinkedList<Operand> = LinkedList()
 
     constructor() : this(null)
 
     constructor(source: EvalObject?) : super() {
         this.source = source
+    }
+
+    override fun visit(x: SQLSelectItem): Boolean {
+        stack.push(x)
+        return true
+    }
+
+    override fun endVisit(x: SQLSelectItem) {
+        val column = stack.pop() as Operand
+        if (x.alias != null) {
+            column.alias = x.alias
+        }
+        outputs.add(column)
+        popPlaceholderFromStack()
+    }
+
+    override fun visit(x: SQLAllColumnExpr): Boolean {
+        stack.push(source)
+        return false
     }
 
     override fun visit(expr: SQLIntegerExpr): Boolean {

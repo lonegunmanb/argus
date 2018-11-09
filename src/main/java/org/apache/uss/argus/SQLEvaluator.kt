@@ -2,27 +2,37 @@ package org.apache.uss.argus
 
 import com.alibaba.druid.sql.SQLUtils
 import com.alibaba.druid.sql.ast.SQLStatement
+import org.apache.uss.argus.operand.EvalObject
+import org.apache.uss.argus.operand.Operand
 import org.apache.uss.argus.operand.ValidationObject
 import org.apache.uss.argus.visitor.EvaluatorVisitor
-import org.apache.uss.argus.visitor.SourceVisitor
+import org.apache.uss.argus.visitor.QueryAnalysisVisitor
+import java.util.*
 
-class SQLEvaluator(val sql: String, val dbType: String) {
-    private var statement: SQLStatement? = null
-    var source: String? = null
-        private set
-    var sourceAlias: String? = null
-        private set
+class SQLEvaluator {
+    private val statement: SQLStatement
+    private val hasWhere: Boolean
+    val sql: String
+    val dbType: String
+    val source: String
+    val sourceAlias: String?
+
+    constructor(statement: SQLStatement, sql: String, dbType: String, source: String, sourceAlias: String?, hasWhere: Boolean) {
+        this.statement = statement
+        this.sql = sql
+        this.dbType = dbType
+        this.source = source
+        this.sourceAlias = sourceAlias
+        this.hasWhere = hasWhere
+    }
 
     companion object {
         fun compile(sql: String, dbType: String): SQLEvaluator {
-            val evaluator = SQLEvaluator(sql, dbType)
             val statement = parseStatement(sql, dbType)
-            evaluator.statement = statement
-            val sourceVisitor = SourceVisitor()
-            evaluator.statement!!.accept(sourceVisitor)
-            evaluator.source = sourceVisitor.source
-            evaluator.sourceAlias = sourceVisitor.alias
-            validateStatement(statement, sourceVisitor.source, evaluator.sourceAlias)
+            val analysisVisitor = QueryAnalysisVisitor()
+            statement.accept(analysisVisitor)
+            val evaluator = SQLEvaluator(statement, sql, dbType, analysisVisitor.source, analysisVisitor.alias, analysisVisitor.where != null)
+            validateStatement(statement, analysisVisitor.source, evaluator.sourceAlias)
             return evaluator
         }
 
@@ -43,5 +53,19 @@ class SQLEvaluator(val sql: String, val dbType: String) {
             val visitor = EvaluatorVisitor(ValidationObject(sourceName, sourceAlias, null))
             statement.accept(visitor)
         }
+    }
+
+    fun evalOutputs(source: EvalObject): Iterable<Operand> {
+        source.objectName = this.source
+        source.alias = this.sourceAlias
+        val visitor = EvaluatorVisitor(source)
+        this.statement.accept(visitor)
+        if (hasWhere) {
+            val valid = (visitor.value as Operand).getOperand<Boolean>() ?: false
+            if (!valid) {
+                return Iterable { Collections.emptyIterator<EvalObject>() }
+            }
+        }
+        return visitor.outputs
     }
 }

@@ -8,7 +8,7 @@ import kotlin.reflect.KClass
 
 class PojoObject(private val `object`: Any, objectName: String, alias: String?, expr: SQLExpr?) : EvalObject(objectName, alias, expr) {
 
-    constructor(`object`: Any, objectName: String, expr: SQLExpr) : this(`object`, objectName, null, expr)
+    constructor(`object`: Any, objectName: String, expr: SQLExpr?) : this(`object`, objectName, null, expr)
 
     override fun operand(clazz: KClass<*>): Any? {
         return when {
@@ -20,7 +20,7 @@ class PojoObject(private val `object`: Any, objectName: String, alias: String?, 
     override fun isType(clazz: KClass<*>): Boolean {
         return when (`object`) {
             EvaluatorVisitor.Nil -> true
-            clazz == Array::class -> `object`.javaClass.isArray
+            clazz.java.isArray -> `object`.javaClass.isArray
             else -> clazz.java.isAssignableFrom(`object`.javaClass)
         }
     }
@@ -33,13 +33,13 @@ class PojoObject(private val `object`: Any, objectName: String, alias: String?, 
         if (isNil()) {
             return PojoObject(EvaluatorVisitor.Nil, property, expr)
         }
-        val getMethodName = "get${property.capitalize()}"
+        val getMethodName = if (property.startsWith("is")) property else "get${property.capitalize()}"
         val method: Method = try {
             `object`.javaClass.getMethod(getMethodName)
         } catch (e: NoSuchMethodException) {
             return PojoObject(EvaluatorVisitor.Nil, property, expr)
         }
-        val value = method.invoke(`object`)
+        val value = method.invoke(`object`) ?: EvaluatorVisitor.Nil
         return PojoObject(value, property, expr)
     }
 
