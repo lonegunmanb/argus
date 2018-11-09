@@ -4,5 +4,5 @@ import com.alibaba.druid.sql.ast.SQLExpr
 import kotlin.reflect.KClass
 
 @Suppress("unused")
-class TypeParadoxException(typeInferenced: KClass<*>, val inferenceSource: SQLExpr, paradoxType: KClass<*>)
-    : RuntimeException("Type Paradox: ${typeInferenced.simpleName} is not ${paradoxType.simpleName}")
+class TypeParadoxException(typeInferenced: KClass<*>, inferenceSource: SQLExpr?, paradoxType: KClass<*>)
+    : RuntimeException("Type Paradox: ${typeInferenced.simpleName} base on ${inferenceSource.toString()} is not ${paradoxType.simpleName}")

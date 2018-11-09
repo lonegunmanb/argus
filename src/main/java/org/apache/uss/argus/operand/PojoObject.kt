@@ -6,7 +6,7 @@ import java.lang.reflect.Array
 import java.lang.reflect.Method
 import kotlin.reflect.KClass
 
-class PojoObject(private val `object`: Any, objectName: String, alias: String?, expr: SQLExpr) : EvalObject(objectName, alias, expr) {
+class PojoObject(private val `object`: Any, objectName: String, alias: String?, expr: SQLExpr?) : EvalObject(objectName, alias, expr) {
 
     constructor(`object`: Any, objectName: String, expr: SQLExpr) : this(`object`, objectName, null, expr)
 

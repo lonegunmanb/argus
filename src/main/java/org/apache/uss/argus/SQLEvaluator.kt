@@ -2,7 +2,6 @@ package org.apache.uss.argus
 
 import com.alibaba.druid.sql.SQLUtils
 import com.alibaba.druid.sql.ast.SQLStatement
-import com.alibaba.druid.sql.ast.expr.SQLIdentifierExpr
 import org.apache.uss.argus.operand.ValidationObject
 import org.apache.uss.argus.visitor.EvaluatorVisitor
 import org.apache.uss.argus.visitor.SourceVisitor
@@ -41,7 +40,7 @@ class SQLEvaluator(val sql: String, val dbType: String) {
         }
 
         fun validateStatement(statement: SQLStatement, sourceName: String, sourceAlias: String?) {
-            val visitor = EvaluatorVisitor(ValidationObject(sourceName, sourceAlias, /*TODO: a temp workaround*/SQLIdentifierExpr(sourceName)))
+            val visitor = EvaluatorVisitor(ValidationObject(sourceName, sourceAlias, null))
             statement.accept(visitor)
         }
     }

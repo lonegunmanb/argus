@@ -8,7 +8,7 @@ import java.math.BigDecimal
 import java.math.BigInteger
 import kotlin.reflect.KClass
 
-class ValidationObject(objectName: String, alias: String?, expr: SQLExpr) : EvalObject(objectName, alias, expr) {
+class ValidationObject(objectName: String, alias: String?, expr: SQLExpr?) : EvalObject(objectName, alias, expr) {
 
     companion object {
         private object Obj

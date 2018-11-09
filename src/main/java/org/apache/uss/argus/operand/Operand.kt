@@ -3,7 +3,7 @@ package org.apache.uss.argus.operand
 import com.alibaba.druid.sql.ast.SQLExpr
 import kotlin.reflect.KClass
 
-abstract class Operand(val expr: SQLExpr) {
+abstract class Operand(val expr: SQLExpr?) {
 
     inline fun <reified T> getOperand(): T? {
         return this.operand(T::class) as? T
@@ -22,7 +22,7 @@ abstract class Operand(val expr: SQLExpr) {
 
     internal abstract fun isNil(): Boolean
 
-    operator fun component1(): SQLExpr {
+    operator fun component1(): SQLExpr? {
         return expr
     }
 
