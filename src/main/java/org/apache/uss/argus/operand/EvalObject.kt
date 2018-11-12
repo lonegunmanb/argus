@@ -11,4 +11,5 @@ abstract class EvalObject : Operand {
 
     abstract operator fun get(property: String, expr: SQLExpr): EvalObject
     abstract operator fun get(sqlArrayIndex: Int, expr: SQLExpr): EvalObject
+    abstract fun getProperties(): List<Pair<String, Any?>>?
 }

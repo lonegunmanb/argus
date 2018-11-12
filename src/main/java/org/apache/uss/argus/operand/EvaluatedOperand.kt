@@ -5,10 +5,6 @@ import org.apache.uss.argus.visitor.EvaluatorVisitor
 import kotlin.reflect.KClass
 
 class EvaluatedOperand(expr: SQLExpr, private val operandEvaluated: Any) : Operand(expr) {
-    override fun getProperties(): List<Pair<String, Any?>>? {
-        return ArrayList(0)
-    }
-
     override fun operand(clazz: KClass<*>): Any? {
         return operandEvaluated
     }
