@@ -1,12 +1,16 @@
 package org.apache.uss.argus.operand
 
 import com.alibaba.druid.sql.ast.SQLExpr
+import jdk.jshell.spi.ExecutionControl
 import org.apache.uss.argus.visitor.EvaluatorVisitor
 import java.lang.reflect.Array
 import java.lang.reflect.Method
 import kotlin.reflect.KClass
 
 class PojoObject(private val `object`: Any, objectName: String, alias: String?, expr: SQLExpr?) : EvalObject(objectName, alias, expr) {
+    override fun getProperties(): List<Pair<String, Any?>>? {
+        throw NotImplementedError()
+    }
 
     constructor(`object`: Any, objectName: String, expr: SQLExpr?) : this(`object`, objectName, null, expr)
 

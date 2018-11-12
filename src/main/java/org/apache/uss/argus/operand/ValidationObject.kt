@@ -9,6 +9,9 @@ import java.math.BigInteger
 import kotlin.reflect.KClass
 
 class ValidationObject(objectName: String, alias: String?, expr: SQLExpr?) : EvalObject(objectName, alias, expr) {
+    override fun getProperties(): List<Pair<String, Any?>>? {
+        throw UnsupportedFeatureException("Cannot get validation object's properties")
+    }
 
     companion object {
         private object Obj

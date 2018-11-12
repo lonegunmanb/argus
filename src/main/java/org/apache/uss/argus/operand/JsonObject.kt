@@ -7,7 +7,9 @@ import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.google.gson.JsonPrimitive
 import org.apache.uss.argus.TypeMismatchException
+import org.apache.uss.argus.UnsupportedFeatureException
 import org.apache.uss.argus.visitor.EvaluatorVisitor
+import java.util.AbstractMap
 import kotlin.reflect.KClass
 import com.google.gson.JsonObject as JObject
 
@@ -17,6 +19,7 @@ class JsonObject : EvalObject {
     private object gson {
 
         val instance = Gson()
+
     }
 
     private val jsonElement: JsonElement
@@ -25,10 +28,45 @@ class JsonObject : EvalObject {
         this.json = json
         this.jsonElement = gson.instance.fromJson(json, JsonElement::class.java)
     }
-
     private constructor(jsonElement: JsonElement, name: String, expr: SQLExpr?) : super(name, null, expr) {
         json = null
         this.jsonElement = jsonElement
+    }
+
+    override fun getProperties(): List<Pair<String, Any?>>? {
+        return getProperties(this.jsonElement)
+    }
+
+    private fun getProperties(jsonElement: JsonElement):List<Pair<String, Any?>>? {
+        if(jsonElement.isJsonNull){
+            return null
+        }
+        return when (jsonElement) {
+            is JsonPrimitive -> ArrayList()
+            is JObject -> jsonElement.entrySet().map { entry-> Pair<String, Any?>(entry.key, getObj(entry.value)) }
+            else -> throw UnsupportedFeatureException(jsonElement.asString)
+        }
+    }
+
+    private fun getObj(jsonElement: JsonElement): Any?{
+        if(jsonElement.isJsonNull){
+            return null
+        }
+        return when (jsonElement) {
+            is JsonPrimitive-> when {
+                jsonElement.isBoolean -> jsonElement.asBoolean
+                jsonElement.isNumber -> jsonElement.asBigDecimal
+                jsonElement.isString -> jsonElement.asString
+                else -> throw UnsupportedFeatureException(jsonElement.asString)
+            }
+            is JObject -> getProperties(jsonElement)
+            is JsonArray -> getArrayObj(jsonElement)
+            else -> throw UnsupportedFeatureException(jsonElement.asString)
+        }
+    }
+
+    private fun getArrayObj(jsonArray: JsonArray): Array<Any?>{
+        return jsonArray.map { jsonElement -> getObj(jsonElement) }.toTypedArray()
     }
 
     override fun get(property: String, expr: SQLExpr): EvalObject {

@@ -34,5 +34,7 @@ abstract class Operand(val expr: SQLExpr?) {
     operator fun component2(): Any? {
         return this.operand(Any::class)
     }
+
+    abstract fun getProperties(): List<Pair<String, Any?>>?
 }
 
