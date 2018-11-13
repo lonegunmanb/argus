@@ -1,17 +1,16 @@
 package org.apache.uss.argus.operand
 
 import com.alibaba.druid.sql.ast.SQLExpr
-import jdk.jshell.spi.ExecutionControl
 import org.apache.uss.argus.visitor.EvaluatorVisitor
+import org.springframework.util.NumberUtils
 import java.lang.reflect.Array
 import java.lang.reflect.Method
+import java.math.BigDecimal
 import kotlin.reflect.KClass
+import kotlin.reflect.full.memberProperties
+import kotlin.Array as KArray
 
 class PojoObject(private val `object`: Any, objectName: String, alias: String?, expr: SQLExpr?) : EvalObject(objectName, alias, expr) {
-    override fun getProperties(): List<Pair<String, Any?>>? {
-        throw NotImplementedError()
-    }
-
     constructor(`object`: Any, objectName: String, expr: SQLExpr?) : this(`object`, objectName, null, expr)
 
     override fun operand(clazz: KClass<*>): Any? {
@@ -34,25 +33,75 @@ class PojoObject(private val `object`: Any, objectName: String, alias: String?, 
     }
 
     override fun get(property: String, expr: SQLExpr): EvalObject {
-        if (isNil()) {
-            return PojoObject(EvaluatorVisitor.Nil, property, expr)
+        return PojoObject(get(property), property, expr)
+    }
+
+    private fun get(property: String): Any {
+        return get(`object`, property)
+    }
+
+    private fun get(obj:Any, property: String):Any {
+        if (obj === EvaluatorVisitor.Nil) {
+            return EvaluatorVisitor.Nil
         }
+
         val getMethodName = if (property.startsWith("is")) property else "get${property.capitalize()}"
         val method: Method = try {
-            `object`.javaClass.getMethod(getMethodName)
+            obj.javaClass.getMethod(getMethodName)
         } catch (e: NoSuchMethodException) {
-            return PojoObject(EvaluatorVisitor.Nil, property, expr)
+            return EvaluatorVisitor.Nil
         }
-        val value = method.invoke(`object`) ?: EvaluatorVisitor.Nil
-        return PojoObject(value, property, expr)
+        return method.invoke(obj) ?: EvaluatorVisitor.Nil
     }
 
     override fun get(sqlArrayIndex: Int, expr: SQLExpr): EvalObject {
         val name = "$objectName[$sqlArrayIndex]"
-        return try {
-            PojoObject(Array.get(`object`, /*in pg, array sqlArrayIndex start at 1*/sqlArrayIndex - 1), name, expr)
-        } catch (e: ArrayIndexOutOfBoundsException) {
-            PojoObject(EvaluatorVisitor.Nil, name, expr)
+        return PojoObject(get(sqlArrayIndex), name, expr)
+    }
+
+    override fun getArray(): KArray<*> {
+        val array = `object` as? KArray<*> ?: throw TypeCastException()
+        return array.map { item-> convertObject(item) }.toTypedArray()
+    }
+
+    private fun get(sqlArrayIndex: Int): Any {
+        return try{
+            Array.get(`object`, sqlArrayIndex-1) ?: EvaluatorVisitor.Nil
+        }catch (e: ArrayIndexOutOfBoundsException) {
+            EvaluatorVisitor.Nil
         }
+    }
+
+    override fun getProperties(): Properties? {
+        return getProperties(`object`)
+    }
+
+    private fun getProperties(obj: Any): Properties? {
+        if(obj.javaClass.isPrimitive){
+            return null
+        }
+        return obj::class.memberProperties.map { property-> Pair(property.name, getProperty(obj, property.name)) }
+    }
+
+    private fun getProperty(obj:Any, propertyName: String): Any? {
+        val value = get(obj, propertyName)
+        return convertObject(value)
+    }
+
+    private fun convertObject(value: Any?): Any? {
+        return when (value) {
+            null -> null
+            EvaluatorVisitor.Nil -> null
+            is BigDecimal -> value
+            is Number -> NumberUtils.convertNumberToTargetClass(value, BigDecimal::class.java)
+            is String -> value
+            is Boolean -> value
+            is KArray<*> -> getArrayProperty(value)
+            else -> getProperties(value)
+        }
+    }
+
+    private fun getArrayProperty(array: kotlin.Array<*>): kotlin.Array<*>{
+        return array.map { value -> this.convertObject(value) }.toTypedArray()
     }
 }

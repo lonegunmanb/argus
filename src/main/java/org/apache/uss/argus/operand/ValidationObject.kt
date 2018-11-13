@@ -4,13 +4,18 @@ import com.alibaba.druid.sql.ast.SQLExpr
 import org.apache.uss.argus.TypeParadoxException
 import org.apache.uss.argus.UnsupportedFeatureException
 import org.apache.uss.argus.visitor.EvaluatorVisitor
+import java.lang.UnsupportedOperationException
 import java.math.BigDecimal
 import java.math.BigInteger
 import kotlin.reflect.KClass
 
-class ValidationObject(objectName: String, alias: String?, expr: SQLExpr?) : EvalObject(objectName, alias, expr) {
+internal class ValidationObject(objectName: String, alias: String?, expr: SQLExpr?) : EvalObject(objectName, alias, expr) {
     override fun getProperties(): List<Pair<String, Any?>>? {
         throw UnsupportedFeatureException("Cannot get validation object's properties")
+    }
+
+    override fun getArray(): Array<*> {
+        throw UnsupportedOperationException()
     }
 
     companion object {
