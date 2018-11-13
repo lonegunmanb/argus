@@ -4,8 +4,10 @@ import com.alibaba.druid.sql.SQLUtils
 import com.alibaba.druid.util.JdbcConstants
 import com.alibaba.fastjson.JSON
 import com.google.gson.Gson
+import com.nhaarman.mockito_kotlin.*
 import org.apache.uss.argus.operand.*
 import org.apache.uss.argus.serializer.JsonSerializer
+import org.apache.uss.argus.serializer.OperandSerializer
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -194,6 +196,19 @@ internal class SQLEvaluatorTest {
         val serializer = evaluator.eval(JsonObject(JSON.toJSONString(input), "", null, null))
         val json = serializer.jsonInstance.toString()
         assertEquals("{}", json)
+    }
+
+    @Suppress("UNUSED_VARIABLE")
+    @Test
+    fun testDefaultColumnName() {
+        val sql = "SELECT 1, 2 FROM Records"
+        val serializer = mock<OperandSerializer>()
+        whenever(serializer.writeNumber(any(), eq("column0"))).thenAnswer {  }
+        whenever(serializer.writeNumber(any(), eq("column1"))).thenAnswer {  }
+        val evaluator = SQLEvaluator.compile(sql, JdbcConstants.POSTGRESQL, serializer)
+        val output = evaluator.eval(ValidationObject("", null, null))
+        verify(serializer).writeNumber(any(), eq("column0"))
+        verify(serializer).writeNumber(any(), eq("column1"))
     }
 
     companion object {
