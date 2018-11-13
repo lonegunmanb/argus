@@ -113,4 +113,11 @@ class JsonSerializerTest {
         assertArrayEquals(obj.array[0], obj2.array[0])
         assertArrayEquals(obj.array[1], obj2.array[1])
     }
+
+    @Test
+    fun writeNullTest() {
+        sut.writeNull("test")
+        val json = sut.jsonInstance.toString()
+        assertEquals("""{"test":null}""", json)
+    }
 }

@@ -8,8 +8,11 @@ import org.apache.uss.argus.operand.EvalObject
 import org.apache.uss.argus.operand.Properties
 
 class JsonSerializer : OperandSerializer {
-
     val jsonInstance = JObject()
+
+    override fun writeNull(name: String) {
+        jsonInstance.add(name, JsonNull.INSTANCE)
+    }
 
     override fun writeNumber(number: Number, name: String) {
         jsonInstance.writeNumber(number, name)

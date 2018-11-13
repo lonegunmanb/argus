@@ -55,7 +55,7 @@ class SQLEvaluator {
         }
     }
 
-    fun evalOutputs(source: EvalObject): Iterable<Operand> {
+    internal fun evalOutputs(source: EvalObject): Iterable<Operand> {
         source.objectName = this.source
         source.alias = this.sourceAlias
         val visitor = EvaluatorVisitor(source)

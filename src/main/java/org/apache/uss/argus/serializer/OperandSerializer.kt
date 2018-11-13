@@ -8,4 +8,5 @@ interface OperandSerializer {
     fun writeString(text: String, name: String)
     fun writeObject(`object`: EvalObject, name: String)
     fun writeArray(array: Array<*>, name: String)
+    fun writeNull(name: String)
 }
