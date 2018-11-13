@@ -186,6 +186,16 @@ internal class SQLEvaluatorTest {
         assertEquals(test4("abc"), output)
     }
 
+    @Test
+    fun testSQLWithNoOutput() {
+        val sql = "SELECT name FROM Records WHERE name='def'"
+        val evaluator = SQLEvaluator.compile(sql, JdbcConstants.POSTGRESQL, JsonSerializer())
+        val input = test3("abc")
+        val serializer = evaluator.eval(JsonObject(JSON.toJSONString(input), "", null, null))
+        val json = serializer.jsonInstance.toString()
+        assertEquals("{}", json)
+    }
+
     companion object {
 
         private val personWithoutAddress = Person("tom", 10, null, true)
