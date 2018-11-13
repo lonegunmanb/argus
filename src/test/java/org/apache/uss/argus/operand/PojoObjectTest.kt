@@ -16,7 +16,6 @@ internal class PojoObjectTest {
         val decimalParameter = pojoObject(BigDecimal("123.456"))
         assertTrue(decimalParameter.isType<BigDecimal>())
         assertTrue(decimalParameter.isType<Number>())
-        assertTrue(decimalParameter.isType<Any>())
         assertFalse(decimalParameter.isType<Boolean>())
     }
 

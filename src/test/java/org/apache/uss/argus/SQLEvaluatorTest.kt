@@ -2,20 +2,17 @@ package org.apache.uss.argus
 
 import com.alibaba.druid.sql.SQLUtils
 import com.alibaba.druid.util.JdbcConstants
-import org.apache.uss.argus.operand.Address
-import org.apache.uss.argus.operand.Operand
-import org.apache.uss.argus.operand.Person
-import org.apache.uss.argus.operand.PojoObject
+import com.alibaba.fastjson.JSON
+import com.google.gson.Gson
+import org.apache.uss.argus.operand.*
+import org.apache.uss.argus.serializer.JsonSerializer
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.ValueSource
 
 import java.util.LinkedList
-
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNull
-import org.junit.jupiter.api.Assertions.assertThrows
 
 internal class SQLEvaluatorTest {
     private val address = Address("address", "city", null)
@@ -24,7 +21,7 @@ internal class SQLEvaluatorTest {
     @Test
     fun testCompileSql() {
         val sql = "SELECT * FROM Table as T"
-        val evaluator = SQLEvaluator.compile(sql, JdbcConstants.POSTGRESQL)
+        val evaluator = SQLEvaluator.compile(sql, JdbcConstants.POSTGRESQL, DummySerializer())
         assertEquals(sql, evaluator.sql)
         assertEquals(JdbcConstants.POSTGRESQL, evaluator.dbType)
         assertEquals("Table", evaluator.source)
@@ -62,7 +59,7 @@ internal class SQLEvaluatorTest {
     @Test
     fun testSelectAll() {
         val sql = "SELECT * FROM Person"
-        val evaluator = SQLEvaluator.compile(sql, JdbcConstants.POSTGRESQL)
+        val evaluator = SQLEvaluator.compile(sql, JdbcConstants.POSTGRESQL, DummySerializer())
         val outputs = evaluator.evalOutputs(PojoObject(personWithoutAddress, "Person", null))
         val outputList = LinkedList<Operand>()
         outputs.forEach { outputList.add(it) }
@@ -74,8 +71,8 @@ internal class SQLEvaluatorTest {
     @ValueSource(strings = arrayOf("SELECT * FROM Person Where address.city='shanghai'",
             "SELECT * FROM Person Where isMale=false"))
     fun testFilteredSelect(sql: String) {
-        val evaluator = SQLEvaluator.compile(sql, JdbcConstants.POSTGRESQL)
-        val outputs = evaluator.evalOutputs(PojoObject(personWithoutAddress, "Person", null))
+        val evaluator = SQLEvaluator.compile(sql, JdbcConstants.POSTGRESQL, DummySerializer())
+        val outputs = evaluator.evalOutputs(PojoObject(personWithoutAddress, "", null))
         val outputList = LinkedList<Operand>()
         outputs.forEach{ outputList.add(it) }
         assertEquals(0, outputList.size)
@@ -84,8 +81,8 @@ internal class SQLEvaluatorTest {
     @ParameterizedTest
     @ValueSource(strings = arrayOf("SELECT name as n FROM Person", "SELECT address.city as n FROM Person"))
     fun testAlias(sql: String) {
-        val evaluator = SQLEvaluator.compile(sql, JdbcConstants.POSTGRESQL)
-        val outputs = evaluator.evalOutputs(PojoObject(personWithAddress, "Person", null))
+        val evaluator = SQLEvaluator.compile(sql, JdbcConstants.POSTGRESQL, DummySerializer())
+        val outputs = evaluator.evalOutputs(PojoObject(personWithAddress, "", null))
         val outputList = LinkedList<Operand>()
         outputs.forEach{ outputList.add(it) }
         assertEquals("n", outputList[0].alias)
@@ -95,8 +92,8 @@ internal class SQLEvaluatorTest {
     @CsvSource("SELECT name FROM Person, name",
             "SELECT address.city FROM Person, city")
     fun testColumnName(sql: String, name: String) {
-        val evaluator = SQLEvaluator.compile(sql, JdbcConstants.POSTGRESQL)
-        val outputs = evaluator.evalOutputs(PojoObject(personWithAddress, "Person", null))
+        val evaluator = SQLEvaluator.compile(sql, JdbcConstants.POSTGRESQL, DummySerializer())
+        val outputs = evaluator.evalOutputs(PojoObject(personWithAddress, "", null))
         val outputList = LinkedList<Operand>()
         outputs.forEach{ outputList.add(it) }
         assertEquals(name, outputList[0].objectName)
@@ -105,8 +102,8 @@ internal class SQLEvaluatorTest {
     @Test
     fun testMultipleColumn() {
         val sql = "SELECT name, age, address, isMale FROM Person"
-        val evaluator = SQLEvaluator.compile(sql, JdbcConstants.POSTGRESQL)
-        val outputs = evaluator.evalOutputs(PojoObject(personWithAddress, "Person", null))
+        val evaluator = SQLEvaluator.compile(sql, JdbcConstants.POSTGRESQL, DummySerializer())
+        val outputs = evaluator.evalOutputs(PojoObject(personWithAddress, "", null))
         val outputList = LinkedList<Operand>()
         outputs.forEach{ outputList.add(it) }
         assertEquals(4, outputList.size)
@@ -127,8 +124,8 @@ internal class SQLEvaluatorTest {
     @Test
     fun testColumnWithoutNameButAlias() {
         val sql = "SELECT 1+1 as r FROM Person"
-        val evaluator = SQLEvaluator.compile(sql, JdbcConstants.POSTGRESQL)
-        val outputs = evaluator.evalOutputs(PojoObject(personWithAddress, "Person", null))
+        val evaluator = SQLEvaluator.compile(sql, JdbcConstants.POSTGRESQL, DummySerializer())
+        val outputs = evaluator.evalOutputs(PojoObject(personWithAddress, "", null))
         val outputList = LinkedList<Operand>()
         outputs.forEach{ outputList.add(it) }
         val column = outputList[0]
@@ -139,13 +136,54 @@ internal class SQLEvaluatorTest {
     @Test
     fun testColumnWithoutNameOrAlias() {
         val sql = "SELECT 1+1 FROM Person"
-        val evaluator = SQLEvaluator.compile(sql, JdbcConstants.POSTGRESQL)
-        val outputs = evaluator.evalOutputs(PojoObject(personWithAddress, "Person", null))
+        val evaluator = SQLEvaluator.compile(sql, JdbcConstants.POSTGRESQL, DummySerializer())
+        val outputs = evaluator.evalOutputs(PojoObject(personWithAddress, "", null))
         val outputList = LinkedList<Operand>()
         outputs.forEach{ outputList.add(it) }
         val column = outputList[0]
         assertNull(column.objectName)
         assertNull(column.alias)
+    }
+
+    @Test
+    fun testMultipleColumn_JsonInput_JsonOutput(){
+        val sql = "SELECT name, age, address, isMale FROM Person"
+        val evaluator = SQLEvaluator.compile(sql, JdbcConstants.POSTGRESQL, JsonSerializer())
+        val gson = Gson()
+        val serializedPerson = gson.toJson(personWithAddress)
+        val serializer = evaluator.eval(JsonObject(serializedPerson, "", null, null))
+        val json = serializer.jsonInstance.toString()
+        val person = gson.fromJson<Person>(json, Person::class.java)//JSON.parseObject(json, Person::class.java)
+        assertEquals(personWithAddress.address, person.address)
+        assertEquals(personWithAddress, person)
+    }
+    data class test2(val ids:Array<Int>)
+    @Suppress("ClassName", "ArrayInDataClass")
+    @Test
+    fun testArrayColumn_JsonOutput() {
+        val sql = "SELECT ids FROM Records"
+        val evaluator = SQLEvaluator.compile(sql, JdbcConstants.POSTGRESQL, JsonSerializer())
+
+        val obj = test2(arrayOf(1, 2))
+        val serializer = evaluator.eval(JsonObject(JSON.toJSONString(obj), "", null, null))
+        val arrayJson = serializer.jsonInstance.toString()
+        val gson = Gson()
+        val obj2 = gson.fromJson<test2>(arrayJson, test2::class.java)
+        assertArrayEquals(obj.ids, obj2.ids)
+    }
+
+    data class test3(val name:String)
+    data class test4(val n:String)
+    @Test
+    fun testSQLWithAliasName() {
+        val sql = "SELECT r.name as n FROM Records as r WHERE r.name='abc'"
+        val evaluator = SQLEvaluator.compile(sql, JdbcConstants.POSTGRESQL, JsonSerializer())
+        val input = test3("abc")
+        val serializer = evaluator.eval(JsonObject(JSON.toJSONString(input), "", null, null))
+        val json = serializer.jsonInstance.toString()
+        val gson = Gson()
+        val output = gson.fromJson<test4>(json, test4::class.java)
+        assertEquals(test4("abc"), output)
     }
 
     companion object {

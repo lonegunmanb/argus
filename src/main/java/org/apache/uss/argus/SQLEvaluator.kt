@@ -5,33 +5,19 @@ import com.alibaba.druid.sql.ast.SQLStatement
 import org.apache.uss.argus.operand.EvalObject
 import org.apache.uss.argus.operand.Operand
 import org.apache.uss.argus.operand.ValidationObject
+import org.apache.uss.argus.serializer.OperandSerializer
 import org.apache.uss.argus.visitor.EvaluatorVisitor
 import org.apache.uss.argus.visitor.QueryAnalysisVisitor
 import java.util.*
 
-class SQLEvaluator {
-    private val statement: SQLStatement
-    private val hasWhere: Boolean
-    val sql: String
-    val dbType: String
-    val source: String
-    val sourceAlias: String?
-
-    constructor(statement: SQLStatement, sql: String, dbType: String, source: String, sourceAlias: String?, hasWhere: Boolean) {
-        this.statement = statement
-        this.sql = sql
-        this.dbType = dbType
-        this.source = source
-        this.sourceAlias = sourceAlias
-        this.hasWhere = hasWhere
-    }
+internal class SQLEvaluator<TSerializer : OperandSerializer>(private val statement: SQLStatement, val sql: String, val dbType: String, val source: String, val sourceAlias: String?, private val hasWhere: Boolean, private val serializer: TSerializer) {
 
     companion object {
-        fun compile(sql: String, dbType: String): SQLEvaluator {
+        fun <T : OperandSerializer> compile(sql: String, dbType: String, serializer: T): SQLEvaluator<T> {
             val statement = parseStatement(sql, dbType)
             val analysisVisitor = QueryAnalysisVisitor()
             statement.accept(analysisVisitor)
-            val evaluator = SQLEvaluator(statement, sql, dbType, analysisVisitor.source, analysisVisitor.alias, analysisVisitor.where != null)
+            val evaluator = SQLEvaluator<T>(statement, sql, dbType, analysisVisitor.source, analysisVisitor.alias, analysisVisitor.where != null, serializer)
             validateStatement(statement, analysisVisitor.source, evaluator.sourceAlias)
             return evaluator
         }
@@ -67,5 +53,22 @@ class SQLEvaluator {
             }
         }
         return visitor.outputs
+    }
+
+    fun eval(source: EvalObject):TSerializer {
+        val outputs = evalOutputs(source)
+        var increments = 0
+        outputs.forEach { operand-> run{
+            val columnName = operand.alias ?: operand.objectName ?: "column${increments++}"
+            when {
+                operand.isNil() -> serializer.writeNull(columnName)
+                operand.isType<Number>() -> serializer.writeNumber(operand.getOperand<Number>()!!, columnName)
+                operand.isType<Boolean>() -> serializer.writeBoolean(operand.getOperand<Boolean>()!!, columnName)
+                operand.isType<Array<*>>() -> serializer.writeArray((operand as EvalObject).getArray(), columnName)
+                operand.isType<String>() -> serializer.writeString(operand.getOperand<String>()!!, columnName)
+                else -> serializer.writeObject(operand as EvalObject, columnName)
+            }
+        } }
+        return serializer
     }
 }

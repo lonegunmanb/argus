@@ -81,9 +81,12 @@ class JsonObject : EvalObject {
         if (jsonElement.isJsonNull) {
             return true
         }
+        if (jsonElement is JObject) {
+            return false
+        }
         return when {
-            clazz == Boolean::class -> isBoolean(jsonElement.asString)
-            Number::class.java.isAssignableFrom(clazz.java) -> isNumber(jsonElement.asString)
+            clazz == Boolean::class -> isBoolean(jsonElement)
+            Number::class.java.isAssignableFrom(clazz.java) -> isNumber(jsonElement)
             clazz == String::class -> true
             clazz.java.isArray -> jsonElement.isJsonArray
             else -> throw UnsupportedOperationException("Don't support ${clazz.simpleName}")
@@ -94,8 +97,20 @@ class JsonObject : EvalObject {
         return jsonElement.isJsonNull
     }
 
-    private fun isBoolean(content: String?) =
-            content == "true" || content == "false"
+    private fun isNumber(jsonElement: JsonElement): Boolean {
+        if(!jsonElement.isJsonPrimitive){
+            return false
+        }
+        return isNumber(jsonElement.asString)
+    }
+
+    private fun isBoolean(jsonElement: JsonElement):Boolean {
+        if(!jsonElement.isJsonPrimitive){
+            return false
+        }
+        val content = jsonElement.asString
+        return content == "true" || content == "false"
+    }
 
     private fun getProperties(jsonElement: JsonElement): Properties? {
         if (jsonElement.isJsonNull) {
